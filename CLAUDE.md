@@ -17,3 +17,5 @@ NON-NEGOTIABLE RULES:
 - Explain non-obvious decisions briefly in comments and in your summary, I am a student and want to learn.
 
 PHASES: 0 setup, 1 MVP status board, 2 room features, 3 push notifications, 4 geofence + energy + schedule, 5 fun layer, 6 CI + AWS + docs.
+
+CURRENT STATE: read docs/PROGRESS.md at the start of each session, and keep it updated after each task. Use Node from .nvmrc (`nvm use`).

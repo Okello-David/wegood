@@ -1,34 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WeGood? 🛋️
 
-## Getting Started
+A mobile-first PWA that lets roommates see each other's status at a glance: where they are, how hungry they are, what they're bringing home and when they'll be back. Every common action takes 1-2 taps.
 
-First, run the development server:
+Project rules live in [CLAUDE.md](CLAUDE.md).
+
+| Document | Read it for |
+|---|---|
+| [docs/PROGRESS.md](docs/PROGRESS.md) | What's done, what's been tested, what's next. **Start here when resuming.** |
+| [docs/SETUP.md](docs/SETUP.md) | Connecting Supabase, email, running on a phone |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the app works and why it's built this way |
+
+## Stack
+
+Next.js 16 (App Router), strict TypeScript, Tailwind CSS 4, Supabase (Postgres, Auth, Realtime). Planned: Web Push, Vercel hosting, and AWS for Phase 6.
+
+## Quick start
+
+Requires Node 22 or later (the project pins 24 in `.nvmrc`).
 
 ```bash
+nvm install    # first time only; reads .nvmrc
+nvm use
+npm install
+cp .env.example .env.local    # then fill in values, see docs/SETUP.md
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. Until `.env.local` has real Supabase values, pages can't load.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commands
 
-## Learn More
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the dev server |
+| `npm run dev -- -H 0.0.0.0` | Dev server reachable from a phone on the same Wi-Fi |
+| `npm run lint` | ESLint |
+| `npx tsc --noEmit` | Type-check |
+| `npm run build` | Production build |
 
-To learn more about Next.js, take a look at the following resources:
+## Folder map
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```text
+app/                 Routes: board (/), login, onboarding, profile, auth/confirm
+components/auth/     Login and create/join room forms
+components/board/    Board, member cards, status bottom sheet
+components/profile/  Name and avatar form
+components/ui/       Shared UI (toast)
+lib/supabase/        Browser, server and proxy Supabase clients
+lib/room.ts          Server-side loading of the signed-in user's room
+lib/status.ts        Location, hunger and chip definitions
+lib/time.ts          Relative times, staleness, ETA calculation
+proxy.ts             Login protection for every route (Next 16's middleware)
+supabase/migrations/ All schema changes, as SQL files
+supabase/tests/      RLS isolation test
+types/database.ts    TypeScript types for the database
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Security rules
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Row Level Security is on for every table.
+- Users' GPS coordinates are never stored.
+- Secrets stay in server-side environment variables. `.env.example` holds names only.
+- Schema changes go through `supabase/migrations`.
