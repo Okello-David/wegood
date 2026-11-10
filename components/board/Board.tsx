@@ -3,11 +3,21 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import Feed from "@/components/board/Feed";
 import MemberCard from "@/components/board/MemberCard";
 import StatusSheet from "@/components/board/StatusSheet";
 import Toast from "@/components/ui/Toast";
+import { FEED_LIMIT, loadFeed, loadRequests } from "@/lib/queries";
+import { useLiveRows } from "@/lib/realtime/useLiveRows";
+import { requestErrorMessage } from "@/lib/requests";
 import { createClient } from "@/lib/supabase/client";
-import type { ProfileRow, StatusPatch, StatusRow } from "@/types/database";
+import type {
+  FeedEventRow,
+  ProfileRow,
+  RequestRow,
+  StatusPatch,
+  StatusRow,
+} from "@/types/database";
 
 type Props = {
   myId: string;
@@ -16,6 +26,8 @@ type Props = {
   inviteCode: string;
   profiles: ProfileRow[];
   statuses: StatusRow[];
+  requests: RequestRow[];
+  feed: FeedEventRow[];
   serverNow: number;
 };
 
@@ -37,6 +49,22 @@ export default function Board(props: Props) {
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const toastId = useRef(0);
   const knownProfiles = useRef(new Set(props.profiles.map((p) => p.id)));
+
+  // Phase 2: visitor notes and the activity feed, kept live by the shared hook.
+  const requests = useLiveRows({
+    supabase,
+    table: "requests",
+    roomId,
+    initialRows: props.requests,
+    load: loadRequests,
+  });
+  const feed = useLiveRows({
+    supabase,
+    table: "feed_events",
+    roomId,
+    initialRows: props.feed,
+    load: loadFeed,
+  });
 
   const showToast = useCallback((message: string) => {
     toastId.current += 1;
@@ -177,11 +205,39 @@ export default function Board(props: Props) {
     [statuses, profiles, myId],
   );
 
+  const notesFor = useMemo(() => {
+    const map: Record<string, RequestRow[]> = {};
+    for (const request of requests.rows) {
+      if (request.kind === "visitor_note" && !request.done_at && request.for_user) {
+        (map[request.for_user] ??= []).push(request);
+      }
+    }
+    return map;
+  }, [requests.rows]);
+  const noteText = (userId: string) => (notesFor[userId] ?? []).map((note) => note.text);
+
+  // Newest first; live inserts are appended, so sort and trim here.
+  const latestFeed = useMemo(
+    () => [...feed.rows].sort((a, b) => b.id - a.id).slice(0, FEED_LIMIT),
+    [feed.rows],
+  );
+
+  async function clearMyNotes() {
+    const mine = notesFor[myId] ?? [];
+    const results = await Promise.all(
+      mine.map((note) => supabase.rpc("complete_request", { p_id: note.id })),
+    );
+    const failed = results.find((result) => result.error);
+    if (failed?.error) showToast(requestErrorMessage(failed.error));
+    else showToast("Noted 👍");
+    void requests.refetch();
+  }
+
   const myStatus = statuses[myId];
   const myProfile = profiles[myId];
 
   return (
-    <main className="mx-auto min-h-dvh max-w-md px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-28">
+    <main className="mx-auto min-h-dvh max-w-md px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-44">
       <header className="mb-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-bold">{roomName}</h1>
@@ -190,7 +246,7 @@ export default function Board(props: Props) {
           </p>
         </div>
         <Link
-          href="/profile"
+          href="/me"
           aria-label="Edit profile"
           className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl"
         >
@@ -205,8 +261,18 @@ export default function Board(props: Props) {
             status={myStatus}
             now={now}
             isMe
+            notes={noteText(myId)}
             onOpen={() => setSheetOpen(true)}
           />
+        )}
+        {(notesFor[myId]?.length ?? 0) > 0 && (
+          <button
+            type="button"
+            onClick={() => void clearMyNotes()}
+            className="min-h-12 rounded-xl bg-amber-400 font-semibold text-amber-950"
+          >
+            Got it 👍 (clear my note{notesFor[myId].length > 1 ? "s" : ""})
+          </button>
         )}
         {roommates.map((status) => (
           <MemberCard
@@ -214,6 +280,7 @@ export default function Board(props: Props) {
             profile={profiles[status.user_id]}
             status={status}
             now={now}
+            notes={noteText(status.user_id)}
           />
         ))}
         {roommates.length === 0 && (
@@ -224,11 +291,13 @@ export default function Board(props: Props) {
         )}
       </div>
 
+      <Feed events={latestFeed} now={now} />
+
       <button
         type="button"
         onClick={() => setSheetOpen(true)}
         aria-label="Update my status"
-        className="fixed right-4 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] flex size-16 items-center justify-center rounded-full bg-stone-900 text-3xl text-white shadow-lg"
+        className="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex size-16 items-center justify-center rounded-full bg-stone-900 text-3xl text-white shadow-lg"
       >
         ✏️
       </button>

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import Toast from "@/components/ui/Toast";
@@ -12,9 +11,21 @@ const EMOJIS = [
   "🦄", "🐝", "🍕", "🌮", "🍉", "🔥", "⚡", "🌈",
 ];
 
-type Props = { userId: string; initialName: string; initialEmoji: string };
+type Props = {
+  userId: string;
+  initialName: string;
+  initialEmoji: string;
+  roomName: string;
+  inviteCode: string;
+};
 
-export default function ProfileForm({ userId, initialName, initialEmoji }: Props) {
+export default function ProfileForm({
+  userId,
+  initialName,
+  initialEmoji,
+  roomName,
+  inviteCode,
+}: Props) {
   const router = useRouter();
   const [supabase] = useState(createClient);
   const [name, setName] = useState(initialName);
@@ -67,16 +78,17 @@ export default function ProfileForm({ userId, initialName, initialEmoji }: Props
 
   return (
     <>
-      <header className="mb-6 flex items-center gap-3">
-        <Link
-          href="/"
-          aria-label="Back to board"
-          className="flex size-12 items-center justify-center rounded-full bg-white text-xl"
-        >
-          ←
-        </Link>
-        <h1 className="text-2xl font-bold">Your profile</h1>
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold">Me</h1>
       </header>
+
+      <section className="mb-6 rounded-2xl bg-white p-4">
+        <p className="text-sm text-stone-600">Room</p>
+        <p className="text-lg font-bold">{roomName}</p>
+        <p className="mt-1 text-sm text-stone-600">
+          Invite code: <span className="font-mono text-base font-semibold">{inviteCode}</span>
+        </p>
+      </section>
 
       <form onSubmit={saveName} className="mb-6 flex flex-col gap-2">
         <label htmlFor="display-name" className="font-semibold">

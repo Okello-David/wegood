@@ -37,12 +37,13 @@ npx tsc --noEmit
 
 ## 4. Prove room isolation
 
-Paste `supabase/tests/rls_isolation.sql` into the Supabase SQL Editor and run it. Success is one row reading `ALL RLS CHECKS PASSED`. It runs in a transaction and rolls back, so it leaves no data.
+Paste `supabase/tests/rls_isolation.sql` into the Supabase SQL Editor and run it. Success is one row reading `ALL RLS CHECKS PASSED`. Then do the same with `supabase/tests/rls_room_features.sql` (Phase 2), which ends with `ALL PHASE 2 RLS CHECKS PASSED`. It runs in a transaction and rolls back, so it leaves no data.
 
 With `psql`, always include `ON_ERROR_STOP`, or the success line can print after a failure:
 
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rls_isolation.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rls_room_features.sql
 ```
 
 ## 5. Email
@@ -102,6 +103,7 @@ Docker can run a throwaway Supabase, which is useful for testing migrations safe
 ```bash
 npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
 docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/rls_isolation.sql
+docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/rls_room_features.sql
 npx supabase stop --no-backup
 ```
 

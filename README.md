@@ -41,18 +41,22 @@ Open http://localhost:3000. Until `.env.local` has real Supabase values, pages c
 ## Folder map
 
 ```text
-app/                 Routes: board (/), login, onboarding, profile, auth/confirm
+app/(app)/           In-room tabs: board (/), stuff, requests, me (shared tab bar layout)
+app/                 Also: login, onboarding, auth/confirm, profile (redirects to /me)
 components/auth/     Login and create/join room forms
-components/board/    Board, member cards, status bottom sheet
+components/board/    Board, member cards, status bottom sheet, activity feed
+components/stuff/    Home Stuff: pantry tiles, add sheet, shopping list
+components/requests/ Requests: quick-create sheet, request cards
+components/nav/      Bottom tab bar
 components/profile/  Name and avatar form
-components/ui/       Shared UI (toast)
+components/ui/       Shared UI (toast, bottom sheet, confirm sheet, hooks)
 lib/supabase/        Browser, server and proxy Supabase clients
 lib/room.ts          Server-side loading of the signed-in user's room
 lib/status.ts        Location, hunger and chip definitions
 lib/time.ts          Relative times, staleness, ETA calculation
 proxy.ts             Login protection for every route (Next 16's middleware)
 supabase/migrations/ All schema changes, as SQL files
-supabase/tests/      RLS isolation test
+supabase/tests/      RLS isolation tests (Phase 1 and Phase 2)
 types/database.ts    TypeScript types for the database
 ```
 

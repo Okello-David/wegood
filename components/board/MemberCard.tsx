@@ -8,10 +8,19 @@ type Props = {
   status: StatusRow;
   now: number;
   isMe?: boolean;
+  // Open visitor notes for this person: highlighted so they can't miss them.
+  notes?: string[];
   onOpen?: () => void;
 };
 
-export default function MemberCard({ profile, status, now, isMe = false, onOpen }: Props) {
+export default function MemberCard({
+  profile,
+  status,
+  now,
+  isMe = false,
+  notes = [],
+  onOpen,
+}: Props) {
   const stale = isStale(status.updated_at, now);
 
   const content = (
@@ -41,12 +50,19 @@ export default function MemberCard({ profile, status, now, isMe = false, onOpen 
         <p className="mt-2 break-words">🛍️ Bringing: {status.bringing}</p>
       )}
       {isFuture(status.eta, now) && <p className="mt-1">⏱️ Back {etaText(status.eta, now)}</p>}
+      {notes.map((note, index) => (
+        <p key={index} className="mt-2 rounded-xl bg-amber-100 px-3 py-2 break-words text-amber-900">
+          📬 {note}
+        </p>
+      ))}
     </>
   );
 
   const cardClass = `w-full rounded-2xl bg-white text-left shadow-sm transition-opacity ${
     isMe ? "p-5" : "p-4"
-  } ${stale ? "opacity-60" : ""}`;
+  } ${stale && notes.length === 0 ? "opacity-60" : ""} ${
+    notes.length > 0 ? "ring-4 ring-amber-400" : ""
+  }`;
 
   if (onOpen) {
     return (

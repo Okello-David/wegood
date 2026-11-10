@@ -1,4 +1,4 @@
-// Mirrors the Phase 1 migration. Regenerate from the live project once it is
+// Mirrors the Phase 1 and 2 migrations. Regenerate from the live project once it is
 // connected: npx supabase gen types typescript --project-id <id> > types/database.ts
 
 export type LocationPreset =
@@ -50,6 +50,45 @@ type Status = {
   expires_at: string | null;
 };
 
+export type PantryKind = "grocery" | "ready_food";
+export type PantryState = "have" | "low" | "out";
+export type RequestKind = "errand" | "clothes" | "visitor_note" | "other";
+export type Urgency = "normal" | "urgent";
+export type FeedKind = "item_out" | "request_created" | "request_claimed" | "request_done";
+
+type PantryItem = {
+  id: string;
+  room_id: string;
+  name: string;
+  kind: PantryKind;
+  state: PantryState;
+  updated_by: string | null;
+  updated_at: string;
+};
+
+type RoomRequest = {
+  id: string;
+  room_id: string;
+  kind: RequestKind;
+  text: string;
+  urgency: Urgency;
+  created_by: string;
+  for_user: string | null;
+  claimed_by: string | null;
+  claimed_at: string | null;
+  done_at: string | null;
+  created_at: string;
+};
+
+type FeedEvent = {
+  id: number;
+  room_id: string;
+  kind: FeedKind;
+  message: string;
+  actor_id: string | null;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -77,6 +116,26 @@ export type Database = {
         Update: Partial<Status>;
         Relationships: [];
       };
+      // Insert and Update list only the columns the grants allow.
+      pantry_items: {
+        Row: PantryItem;
+        Insert: Pick<PantryItem, "room_id" | "name"> & Partial<Pick<PantryItem, "kind" | "state">>;
+        Update: Partial<Pick<PantryItem, "name" | "kind" | "state">>;
+        Relationships: [];
+      };
+      requests: {
+        Row: RoomRequest;
+        Insert: Pick<RoomRequest, "room_id" | "kind" | "text"> &
+          Partial<Pick<RoomRequest, "urgency" | "for_user">>;
+        Update: never;
+        Relationships: [];
+      };
+      feed_events: {
+        Row: FeedEvent;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -85,6 +144,11 @@ export type Database = {
       is_room_member: { Args: { p_room_id: string }; Returns: boolean };
       is_room_admin: { Args: { p_room_id: string }; Returns: boolean };
       shares_room: { Args: { p_user_id: string }; Returns: boolean };
+      is_member_of: { Args: { p_room_id: string; p_user_id: string }; Returns: boolean };
+      my_display_name: { Args: Record<string, never>; Returns: string };
+      claim_request: { Args: { p_id: string }; Returns: RoomRequest };
+      complete_request: { Args: { p_id: string }; Returns: RoomRequest };
+      seed_pantry: { Args: { p_room_id: string }; Returns: number };
     };
     Enums: { location_preset: LocationPreset };
     CompositeTypes: { [_ in never]: never };
@@ -94,3 +158,6 @@ export type Database = {
 export type StatusRow = Status;
 export type ProfileRow = Profile;
 export type StatusPatch = Database["public"]["Tables"]["statuses"]["Update"];
+export type PantryItemRow = PantryItem;
+export type RequestRow = RoomRequest;
+export type FeedEventRow = FeedEvent;
