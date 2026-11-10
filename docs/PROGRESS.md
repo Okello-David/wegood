@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 | Phase | Status |
 |---|---|
@@ -27,12 +27,21 @@ Tested on a throwaway local Supabase (Docker):
 | Outsider subscribing to the room | 0 events, 0 rows |
 | Signed-out redirects | Pass |
 
+| Click-through in a real browser + laptop/iPhone (Firefox) two-device test, over local Wi-Fi | Pass (2026-11-10) |
+
 **Not tested yet:**
-- Clicking through the screens in a real browser
-- Two-browser acceptance test
 - Real magic-link emails
-- Any phone (Android Chrome or iPhone Safari)
+- Android Chrome
 - Anything on the hosted project
+
+## Running it on the laptop + phone (same Wi-Fi)
+
+Set up on 2026-11-10 with the local Supabase:
+- `supabase/config.toml`: `api.external_url`, `auth.site_url` and redirect URLs point at the laptop's LAN IP `192.168.1.168` (machine-specific, not committed). It also adds `supabase/templates/` (token_hash links, same as hosted SETUP.md step 7). Commit the templates part.
+- `.env.local` holds the **local** Supabase keys (public demo keys). Replace them when the hosted project is connected. The empty original is in `.env.local.bak-empty`.
+- Start: `npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,storage-api --ignore-health-check`, then `npm run build && npm run start -- -H 0.0.0.0`. Storage is skipped and health checks are ignored because the containers start slowly on this laptop and timed out.
+- App: http://192.168.1.168:3000. Login emails: Mailpit at http://192.168.1.168:54324.
+- Smoke test (curl): magic link → `/auth/confirm` → signed in → `/onboarding`. Pass.
 
 ## To finish Phase 1
 

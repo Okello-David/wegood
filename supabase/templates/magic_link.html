@@ -1,0 +1,5 @@
+<!-- Local copy of the hosted template (docs/SETUP.md step 7). The link goes
+     straight to our /auth/confirm route with a token_hash, which works even if
+     the email is opened in a different browser than the one that asked. -->
+<h2>Your WeGood? sign-in link</h2>
+<p><a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Log in</a></p>
