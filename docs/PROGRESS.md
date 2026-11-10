@@ -6,7 +6,7 @@ Last updated: 2026-11-10
 |---|---|
 | 0. Setup | Done, except hosted Supabase connection and Vercel |
 | 1. MVP status board | Code complete, tested locally. **Not yet on the real project** |
-| 2. Room features | Code complete, tested locally (automated). **Needs your two-phone test** |
+| 2. Room features | Done. Tested locally, including the laptop + iPhone checklist (2026-11-10). **Not yet on the real project** |
 | 3. Push notifications | Next |
 | 4. Geofence, energy, schedule | Not started |
 | 5. Fun layer | Not started |
@@ -57,7 +57,7 @@ Set up on 2026-11-10 with the local Supabase:
 | Two users claim at the same moment, 20 rounds (script) | Pass, exactly one winner each time; loser gets `already_claimed` + winner's name |
 | All tabs render signed in (/, /stuff, /requests, /me; /profile redirects) | Pass (curl) |
 
-**Not tested yet:** tapping through the new screens on real phones. Checklist below.
+Manual checklist below: all items passed on laptop + iPhone (2026-11-10).
 
 ### Phase 2 manual test checklist (laptop + iPhone Firefox)
 
@@ -66,45 +66,45 @@ Tick each box (`[x]`) as you go. Note anything odd under "Problems found".
 **Before you start:** start Supabase, then build and start the app (see "Running it on the laptop + phone" below). Open http://192.168.1.168:3000 on both devices, signed in as two different accounts in the same room. Login emails are in Mailpit at http://192.168.1.168:54324.
 
 1. Home Stuff setup
-   - [ ] Your room existed before Phase 2, so Home Stuff is empty. Tap **Add common items** once. The 10 items appear (Sugar, Salt, Rice, Posho, Beans, Cooking oil, Bread, Tea leaves, Water, Charcoal/gas).
+   - [x] Your room existed before Phase 2, so Home Stuff is empty. Tap **Add common items** once. The 10 items appear (Sugar, Salt, Rice, Posho, Beans, Cooking oil, Bread, Tea leaves, Water, Charcoal/gas).
 2. Sugar test (acceptance)
-   - [ ] On device A, tap Sugar: it goes amber (Low) with a small squeeze animation. Tap again: red (Out).
-   - [ ] Device B shows Sugar red instantly, without refreshing.
-   - [ ] On both devices, **Shopping list** shows a count, and Sugar is listed under Out.
-   - [ ] The Board feed on both devices says "🚨 Sugar ran out, says …".
+   - [x] On device A, tap Sugar: it goes amber (Low) with a small squeeze animation. Tap again: red (Out).
+   - [x] Device B shows Sugar red instantly, without refreshing.
+   - [x] On both devices, **Shopping list** shows a count, and Sugar is listed under Out.
+   - [x] The Board feed on both devices says "🚨 Sugar ran out, says …".
 3. Shopping list
-   - [ ] **📋 Copy list**, then paste into WhatsApp: the heading and the Out/Running low labels show in bold.
-   - [ ] The **💬 WhatsApp** button opens WhatsApp with the list ready to send.
-   - [ ] **Bought ✅** turns the item green on both devices and removes it from the list.
+   - [x] **📋 Copy list**, then paste into WhatsApp: the heading and the Out/Running low labels show in bold.
+   - [x] The **💬 WhatsApp** button opens WhatsApp with the list ready to send.
+   - [x] **Bought ✅** turns the item green on both devices and removes it from the list.
 4. Add and delete items
-   - [ ] **+** → Ready food → add an item (e.g. "Leftover pilau"). It shows under Ready food on both devices.
-   - [ ] Adding a name that already exists (e.g. "sugar") says it's already on the list.
-   - [ ] Holding a tile for about half a second opens "Delete …?". On iPhone, the text magnifier/menu must NOT pop up.
-   - [ ] **Keep it** cancels. **Delete** removes the item on both devices.
-   - [ ] Scrolling the list with your finger on a tile does not open the delete sheet.
+   - [x] **+** → Ready food → add an item (e.g. "Leftover pilau"). It shows under Ready food on both devices.
+   - [x] Adding a name that already exists (e.g. "sugar") says it's already on the list.
+   - [x] Holding a tile for about half a second opens "Delete …?". On iPhone, the text magnifier/menu must NOT pop up.
+   - [x] **Keep it** cancels. **Delete** removes the item on both devices.
+   - [x] Scrolling the list with your finger on a tile does not open the delete sheet.
 5. Requests
-   - [ ] Device A: **Pick my clothes**. The text is prefilled; send it. It appears on device B.
-   - [ ] Device B: **I got it 🙌**. Both devices show "On it" with B's name, and the feed says "🙌 … is on it".
-   - [ ] Device B (claimer) taps **Done ✅**. It moves to the collapsed **History** on both devices, and the feed says "✅ Done: …".
-   - [ ] **Buy something** with **Urgent** on: it gets a red ring and sits at the top of Open, and the feed shows 🔥.
-   - [ ] The creator can delete their own open, unclaimed request (🗑️ → Delete).
+   - [x] Device A: **Pick my clothes**. The text is prefilled; send it. It appears on device B.
+   - [x] Device B: **I got it 🙌**. Both devices show "On it" with B's name, and the feed says "🙌 … is on it".
+   - [x] Device B (claimer) taps **Done ✅**. It moves to the collapsed **History** on both devices, and the feed says "✅ Done: …".
+   - [x] **Buy something** with **Urgent** on: it gets a red ring and sits at the top of Open, and the feed shows 🔥.
+   - [x] The creator can delete their own open, unclaimed request (🗑️ → Delete).
 6. Claim race (acceptance)
-   - [ ] You need 3 accounts in the room, because whoever creates a request sees **Done**, not **I got it**. Use a laptop private window as the third account (e.g. `frien@test.com`; join with the invite code).
-   - [ ] Account 1 creates an errand. Accounts 2 and 3 (phone + laptop) tap **I got it** at the same moment. Only one wins; the other sees "Too slow! … already got it 😅", then the card shows who won.
+   - [x] You need 3 accounts in the room, because whoever creates a request sees **Done**, not **I got it**. Use a laptop private window as the third account (e.g. `frien@test.com`; join with the invite code).
+   - [x] Account 1 creates an errand. Accounts 2 and 3 (phone + laptop) tap **I got it** at the same moment. Only one wins; the other sees "Too slow! … already got it 😅", then the card shows who won.
 7. Visitor note
-   - [ ] Device A: **Visitor note**. Pick device B's person, type "Someone came for you, back at 6pm", and send.
-   - [ ] On the Board, B's card has an amber ring with the note, on both devices.
-   - [ ] Device B: **Got it 👍** (on the Board or in Requests) clears it everywhere.
+   - [x] Device A: **Visitor note**. Pick device B's person, type "Someone came for you, back at 6pm", and send.
+   - [x] On the Board, B's card has an amber ring with the note, on both devices.
+   - [x] Device B: **Got it 👍** (on the Board or in Requests) clears it everywhere.
 8. Navigation and layout
-   - [ ] The bottom tabs (Board, Home Stuff, Requests, Me) are easy to hit one-handed, the active tab is highlighted, and nothing hides behind the iPhone home bar.
-   - [ ] The ✏️ and + buttons sit above the tab bar and don't cover the last item when scrolled to the bottom.
-   - [ ] **Me** shows the room name, invite code, name/avatar editing and Sign out.
-   - [ ] Lock the phone for a minute, change something on the laptop, then unlock: the phone catches up.
+   - [x] The bottom tabs (Board, Home Stuff, Requests, Me) are easy to hit one-handed, the active tab is highlighted, and nothing hides behind the iPhone home bar.
+   - [x] The ✏️ and + buttons sit above the tab bar and don't cover the last item when scrolled to the bottom.
+   - [x] **Me** shows the room name, invite code, name/avatar editing and Sign out.
+   - [x] Lock the phone for a minute, change something on the laptop, then unlock: the phone catches up.
 
 **Problems found:**
-- (none yet)
+- None.
 
-**When everything passes:** ask Claude to commit Phase 2 on `phase-2-room-features`, then start Phase 3 (push notifications).
+Phase 3 (push notifications) continues on branch `phase-3-push`.
 
 Phase 2 decisions:
 - Requests can't be updated by clients at all; `claim_request` / `complete_request` are the only way. Claiming is race-safe because UPDATE locks the row (see the migration comments).
