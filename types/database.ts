@@ -1,4 +1,4 @@
-// Mirrors the Phase 1 and 2 migrations. Regenerate from the live project once it is
+// Mirrors the Phase 1 to 3 migrations. Regenerate from the live project once it is
 // connected: npx supabase gen types typescript --project-id <id> > types/database.ts
 
 export type LocationPreset =
@@ -78,6 +78,8 @@ type RoomRequest = {
   claimed_at: string | null;
   done_at: string | null;
   created_at: string;
+  // Set by the escalation job when an urgent request sat unclaimed for 10 minutes.
+  escalated_at: string | null;
 };
 
 type FeedEvent = {
@@ -87,6 +89,31 @@ type FeedEvent = {
   message: string;
   actor_id: string | null;
   created_at: string;
+};
+
+type PushSubscriptionRecord = {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string | null;
+  created_at: string;
+};
+
+type NotificationPrefs = {
+  user_id: string;
+  requests: boolean;
+  visitor_notes: boolean;
+  food: boolean;
+  bringing: boolean;
+  pings: boolean;
+  quiet_enabled: boolean;
+  // Postgres `time`, e.g. "23:00:00".
+  quiet_start: string;
+  quiet_end: string;
+  timezone: string;
+  updated_at: string;
 };
 
 export type Database = {
@@ -136,6 +163,20 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      // Saved through save_push_subscription(), so no direct insert or update.
+      push_subscriptions: {
+        Row: PushSubscriptionRecord;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      notification_prefs: {
+        Row: NotificationPrefs;
+        Insert: Pick<NotificationPrefs, "user_id"> &
+          Partial<Omit<NotificationPrefs, "user_id" | "updated_at">>;
+        Update: Partial<Omit<NotificationPrefs, "user_id" | "updated_at">>;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -149,6 +190,10 @@ export type Database = {
       claim_request: { Args: { p_id: string }; Returns: RoomRequest };
       complete_request: { Args: { p_id: string }; Returns: RoomRequest };
       seed_pantry: { Args: { p_room_id: string }; Returns: number };
+      save_push_subscription: {
+        Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string };
+        Returns: undefined;
+      };
     };
     Enums: { location_preset: LocationPreset };
     CompositeTypes: { [_ in never]: never };
@@ -161,3 +206,5 @@ export type StatusPatch = Database["public"]["Tables"]["statuses"]["Update"];
 export type PantryItemRow = PantryItem;
 export type RequestRow = RoomRequest;
 export type FeedEventRow = FeedEvent;
+export type NotificationPrefsRow = NotificationPrefs;
+export type NotificationPrefsPatch = Database["public"]["Tables"]["notification_prefs"]["Update"];

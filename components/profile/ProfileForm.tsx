@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import Toast from "@/components/ui/Toast";
+import { disablePush } from "@/lib/push";
 import { createClient } from "@/lib/supabase/client";
 
 const EMOJIS = [
@@ -17,6 +18,8 @@ type Props = {
   initialEmoji: string;
   roomName: string;
   inviteCode: string;
+  // Extra cards (notifications) shown between the room and the name.
+  children?: ReactNode;
 };
 
 export default function ProfileForm({
@@ -25,6 +28,7 @@ export default function ProfileForm({
   initialEmoji,
   roomName,
   inviteCode,
+  children,
 }: Props) {
   const router = useRouter();
   const [supabase] = useState(createClient);
@@ -69,6 +73,9 @@ export default function ProfileForm({
   }
 
   async function signOut() {
+    // Stop this device's notifications first, while we are still allowed to
+    // delete the row. Otherwise the next person on this phone gets my buzzes.
+    await disablePush(supabase).catch(() => {});
     await supabase.auth.signOut();
     router.replace("/login");
     router.refresh();
@@ -89,6 +96,8 @@ export default function ProfileForm({
           Invite code: <span className="font-mono text-base font-semibold">{inviteCode}</span>
         </p>
       </section>
+
+      {children}
 
       <form onSubmit={saveName} className="mb-6 flex flex-col gap-2">
         <label htmlFor="display-name" className="font-semibold">

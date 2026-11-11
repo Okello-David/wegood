@@ -7,10 +7,56 @@ Last updated: 2026-11-10
 | 0. Setup | Done, except hosted Supabase connection and Vercel |
 | 1. MVP status board | Code complete, tested locally. **Not yet on the real project** |
 | 2. Room features | Done. Tested locally, including the laptop + iPhone checklist (2026-11-10). **Not yet on the real project** |
-| 3. Push notifications | Next |
+| 3. Push notifications | Code complete, tested locally (automated). **Needs your laptop browser test; phone test waits for https** |
 | 4. Geofence, energy, schedule | Not started |
 | 5. Fun layer | Not started |
 | 6. CI, AWS, docs | Not started |
+
+## Pick up here (written 2026-11-10, end of session)
+
+**Where we stopped:** Phase 3 is built, passes every automated check locally and was committed on 2026-11-11 with the manual browser checklist **still open** (no real notification seen on a screen yet). Phase 4 continues on branch `phase-4-smart`; run the Phase 3 checklist whenever convenient.
+
+**To do next, in order:**
+1. Start everything (commands below) and run the "Phase 3 manual test checklist" further down this file, on **http://localhost:3000** in two browser profiles (`me@test.com`, `pro@hot.com`).
+2. Tell Claude what failed or felt off. Claude fixes, ticks the boxes and fills "Problems found".
+3. Ask Claude to commit Phase 3. **Nothing from Phase 3 is committed yet**; it is all uncommitted on branch `phase-3-push`. Leave the LAN IP lines in `supabase/config.toml` out of the commit, but include the `[functions.notify]` block at the bottom of that file.
+4. Start Phase 4 (geofence, energy, schedule).
+
+**Start commands** (the app server stops when the Claude session closes):
+
+```bash
+nvm use
+npx supabase start -x studio,imgproxy,logflare,vector,supavisor,postgres-meta,storage-api --ignore-health-check
+npm run build && npm run start -- -H 0.0.0.0
+```
+
+**Re-run the automated tests:**
+
+```bash
+docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/rls_isolation.sql
+docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/rls_room_features.sql
+docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/rls_push.sql
+node supabase/tests/notify_routing.mjs
+```
+
+**What was checked** (details in "Phase 3 test record" below):
+- Routing: one person home and others away notifies only the home person; nobody home notifies everyone except the sender.
+- Escalation: nothing before 10 minutes; after 11 minutes it fires once, a second run does nothing.
+- The VAPID private key, hook secret and service role key are nowhere in `.next/` or `public/`.
+- The new RLS test passes and catches two deliberately weakened policies. Outsiders, impersonation and missing tokens are rejected.
+- Triggers reach the function through the real database path: new request, visitor note (only the person it's for), bringing, ready food out. A grocery going out sends nothing.
+- Rate limit (11th in 10 minutes refused), quiet hours with urgent passing, and deleting a device the push service reports as gone.
+- Lint, type-check, production build and the Phase 1 and 2 RLS tests still pass.
+
+**Things worth knowing:**
+- **Who calls `notify`:** database triggers for anything that changes a row (so the text can't be faked or skipped, same idea as the Phase 2 feed). The app calls it directly only for Ping home and the test button, because those write no row.
+- **A bug the tests caught:** saving preferences was refused by the database, because an upsert names every column it is given, including `user_id`. `user_id` is now in the update grant; the policy's WITH CHECK still stops it being changed to someone else.
+- **"Food is finished"** goes to people at home first, like requests. Only "bringing" and escalation go to everyone. Open question for you: should food go to everyone instead?
+- **Home all day counts as stale:** "at home" expires 3 hours after it last *changed*, so that person falls into the "everyone" group until Phase 4's geofence keeps it fresh.
+- **Local secrets are in place** on this laptop: `supabase/functions/.env` (git-ignored) holds the VAPID keys and hook secret, `.env.local` holds the public key, and the local Vault holds the function URL and hook secret. They survive `supabase stop`, but not `stop --no-backup` or `db reset` (SETUP.md step 11 shows how to redo them).
+- **`VAPID_SUBJECT` is a placeholder** (`mailto:admin@wegood.invalid`). The hosted project needs a real contact address; Apple can reject made-up ones.
+- **Local Supabase now runs the edge runtime** (about 0.7 GB more). The disk had 4.2 GB free at the end of the session.
+- **Phones need https** for push, so the Android and installed-iPhone acceptance test waits for the hosted Supabase project + Vercel (still blocked on org access, see "To finish Phase 1").
 
 ## Phase 1 test record
 
@@ -39,7 +85,7 @@ Tested on a throwaway local Supabase (Docker):
 Set up on 2026-11-10 with the local Supabase:
 - `supabase/config.toml`: `api.external_url`, `auth.site_url` and redirect URLs point at the laptop's LAN IP `192.168.1.168` (machine-specific, not committed). It also adds `supabase/templates/` (token_hash links, same as hosted SETUP.md step 7). Commit the templates part.
 - `.env.local` holds the **local** Supabase keys (public demo keys). Replace them when the hosted project is connected. The empty original is in `.env.local.bak-empty`.
-- Start: `npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta,storage-api --ignore-health-check`, then `npm run build && npm run start -- -H 0.0.0.0`. Storage is skipped and health checks are ignored because the containers start slowly on this laptop and timed out.
+- Start: `npx supabase start -x studio,imgproxy,logflare,vector,supavisor,postgres-meta,storage-api --ignore-health-check` (the edge runtime is included since Phase 3), then `npm run build && npm run start -- -H 0.0.0.0`. Storage is skipped and health checks are ignored because the containers start slowly on this laptop and timed out.
 - App: http://192.168.1.168:3000. Login emails: Mailpit at http://192.168.1.168:54324.
 - Smoke test (curl): magic link → `/auth/confirm` → signed in → `/onboarding`. Pass.
 
@@ -115,6 +161,77 @@ Phase 2 decisions:
 - Copy-to-clipboard falls back to the old `execCommand` trick on http (the modern API needs https). The WhatsApp button uses a `wa.me` link.
 - Long-press to delete isn't reachable by keyboard. Fine for phones; revisit if desktop matters.
 
+## Phase 3 test record (2026-11-10, local Supabase)
+
+| Check | Result |
+|---|---|
+| Lint, type-check, production build | Pass |
+| Migration `20261110180000_push_notifications.sql` applies | Pass |
+| `rls_isolation.sql`, `rls_room_features.sql` (still) | Pass |
+| `supabase/tests/rls_push.sql` | Pass |
+| The Phase 3 RLS test catches weakened policies | Pass, two caught (subscriptions readable by anyone, log readable) |
+| `supabase/tests/notify_routing.mjs` (24 checks, see below) | Pass |
+| VAPID private key, hook secret, service role key in `.next/` or `public/` | Not found (values and names searched) |
+| `/sw.js` loads signed out; `/me` still redirects to login | Pass |
+| Both pg_cron jobs run on schedule | Pass (`cron.job_run_details`) |
+
+What `notify_routing.mjs` proves, using throwaway users with made-up devices:
+- **Who may call:** no token 401, wrong secret 401, outsider 403, pretending to be a roommate 403, app sending a database-only kind 403.
+- **Routing (acceptance):** one person home, others away → only the home person. Nobody home → everyone except the sender. "Home" older than 3 hours counts as not home.
+- **Preferences:** a switched-off type and quiet hours are skipped with the reason reported; urgent passes quiet hours.
+- **Rate limit:** 10 pass, the 11th in 10 minutes gets 429.
+- **Triggers, through the real database → pg_net → function path:** new request, visitor note (only the person it's for), bringing (everyone), ready food out; a grocery going out sends nothing.
+- **Escalation (acceptance):** nothing before 10 minutes; after 11 minutes it fires once, a second run does nothing.
+- **Dead device:** a real push service answering "gone" deletes the row.
+
+**Not tested yet:**
+- A real notification appearing on screen. The automated test can't own a real browser subscription. Checklist below.
+- App closed on an Android phone and on an installed iPhone (acceptance). Phones need https, so this waits for the hosted project + Vercel.
+
+### Phase 3 manual test checklist (laptop, two browser profiles)
+
+Use **http://localhost:3000**, not the 192.168 address: browsers only allow notifications on https or localhost. Use two Chrome profiles (or Chrome + Firefox), signed in as `me@test.com` and `pro@hot.com`. Login emails: http://192.168.1.168:54324. Make sure your laptop's own "Do not disturb" is off.
+
+1. Turning on
+   - [ ] Me screen shows a **Notifications** card. No permission pop-up appears until you tap.
+   - [ ] Tap **Turn on notifications**, allow. The card says "On for this device ✅".
+   - [ ] **Send me a test notification**: a notification appears. Clicking it opens/focuses WeGood? on the Me screen.
+   - [ ] Do the same in the second profile.
+2. Requests (acceptance, laptop version)
+   - [ ] Close profile B's WeGood? tab (keep the browser running). In A, create a request. B's browser shows the notification. Clicking it opens Requests.
+   - [ ] A **visitor note** for B notifies only B.
+3. Routing
+   - [ ] B sets location Home, A sets Campus. A taps **📣 Ping home**: toast says "Pinged pro (at home)", B gets it.
+   - [ ] B sets Campus too. A pings again: toast says "Nobody's home, pinged …".
+4. Other triggers
+   - [ ] A sets Bringing → Food: B gets "… is bringing food 🍚".
+   - [ ] Home Stuff: add a **Ready food** item, tap it to Out: B gets "Food is finished at home". Sugar going Out sends nothing.
+5. Preferences
+   - [ ] B turns off "Ping home". A pings: B gets nothing. Turn it back on.
+   - [ ] B sets quiet hours to cover the current time. A sends a normal request: nothing. A sends an **Urgent** one: it arrives.
+6. Escalation
+   - [ ] A creates an Urgent request and nobody claims it. Between 10 and 15 minutes later, B gets "🔥 Still waiting…", once.
+7. Clean-up behaviour
+   - [ ] Tap the ✏️ sheet 11+ times quickly on Bringing chips: after 10 the pushes stop (rate limit), the app itself keeps working.
+   - [ ] **Turn off on this device**, then a test from the other profile no longer reaches it.
+   - [ ] Sign out: that browser stops getting notifications.
+8. iPhone guide (look only)
+   - [ ] On the iPhone at http://192.168.1.168:3000 → Me: the card shows "Add WeGood? to your Home Screen first" with three steps, not the button. (Real iPhone push needs https, later.)
+
+**Problems found:**
+- (none yet)
+
+Phase 3 decisions:
+- Triggers for row changes, direct app call for ping/test. Reasons in ARCHITECTURE.md.
+- "Food is finished" uses the routing rule (home first). Only bringing and escalation go to everyone.
+- Preference toggles always apply. Quiet hours are skipped for urgent requests and escalations. A test always goes through.
+- Quiet hours use the time zone the browser reports, saved whenever notifications are turned on or a preference changes. Default `Africa/Kampala`.
+- Escalation counts against the "Requests" toggle and is not rate limited.
+- Saving a subscription moves an existing endpoint to the signed-in user (shared phone). Signing out removes this device's subscription.
+- Stored endpoints must be https, because the function POSTs to them.
+- `notification_log` has no clean-up yet; add one with the feed clean-up.
+- `npm:web-push` runs fine in the Edge runtime; no fallback library was needed.
+
 ## To finish Phase 1
 
 Details are in [SETUP.md](SETUP.md).
@@ -129,10 +246,9 @@ Details are in [SETUP.md](SETUP.md).
 - `npm audit` reports 8 moderate issues, seen in ESLint tooling. Don't use `npm audit fix --force`.
 - `join_room` has no limit on guesses. There are about a billion possible codes, so it's fine for now, but add a limit before wider use.
 - On iPhone, an email link opens in Safari, not an installed home-screen app, and the two don't share a login. Consider a typed one-time code when the PWA is installed for real.
-- The service worker arrives with Phase 3.
 - One room per user, enforced by `statuses.user_id` being the primary key.
 - The disk had about 5 GB free. Local Supabase images use about 2 GB; see SETUP.md to remove them.
 
 ## Git
 
-Phase 2 work is on branch `phase-2-room-features` (branched from `phase-1-status-board`); `main` doesn't exist yet. To make this branch `main`, run `git branch -m main`.
+Phase 3 work is on branch `phase-3-push` (branched from `phase-2-room-features`, which came from `phase-1-status-board`); `main` doesn't exist yet. To make this branch `main`, run `git branch -m main`.

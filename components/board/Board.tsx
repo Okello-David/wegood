@@ -8,6 +8,7 @@ import MemberCard from "@/components/board/MemberCard";
 import StatusSheet from "@/components/board/StatusSheet";
 import Toast from "@/components/ui/Toast";
 import { FEED_LIMIT, loadFeed, loadRequests } from "@/lib/queries";
+import { callNotify, notifyErrorMessage } from "@/lib/push";
 import { useLiveRows } from "@/lib/realtime/useLiveRows";
 import { requestErrorMessage } from "@/lib/requests";
 import { createClient } from "@/lib/supabase/client";
@@ -42,6 +43,7 @@ export default function Board(props: Props) {
   const [statuses, setStatuses] = useState(() => byId(props.statuses, (s) => s.user_id));
   const [now, setNow] = useState(serverNow);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [pinging, setPinging] = useState(false);
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
 
   // Refs, not state: changing these shouldn't redraw the board.
@@ -236,6 +238,32 @@ export default function Board(props: Props) {
   const myStatus = statuses[myId];
   const myProfile = profiles[myId];
 
+  // Phase 3: one tap asks "Anyone home?". The Edge Function decides who gets
+  // it (people at home first, otherwise everyone) and tells us what it did.
+  async function pingHome() {
+    setPinging(true);
+    const answer = await callNotify(supabase, {
+      kind: "ping",
+      room_id: roomId,
+      sender_id: myId,
+      title: `📣 ${myProfile?.display_name ?? "Someone"}: Anyone home?`,
+      body: "Tap to open WeGood? and update your status.",
+      url: "/",
+    });
+    setPinging(false);
+    if ("error" in answer) {
+      showToast(notifyErrorMessage(answer.error));
+      return;
+    }
+    const { rule, targeted, sent } = answer.result;
+    const names = targeted
+      .filter((target) => target.delivered > 0)
+      .map((target) => profiles[target.user_id]?.display_name ?? "someone");
+    if (sent === 0) showToast("Nobody has notifications on yet 🔕");
+    else if (rule === "at_home") showToast(`Pinged ${names.join(", ")} (at home) 📣`);
+    else showToast(`Nobody's home, pinged ${names.join(", ")} 📣`);
+  }
+
   return (
     <main className="mx-auto min-h-dvh max-w-md px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-44">
       <header className="mb-4 flex items-center justify-between gap-3">
@@ -290,6 +318,17 @@ export default function Board(props: Props) {
           </p>
         )}
       </div>
+
+      {roommates.length > 0 && (
+        <button
+          type="button"
+          disabled={pinging}
+          onClick={() => void pingHome()}
+          className="mt-4 min-h-16 w-full rounded-2xl bg-amber-400 text-lg font-bold text-amber-950 shadow disabled:opacity-60"
+        >
+          {pinging ? "Pinging…" : "📣 Ping home: anyone there?"}
+        </button>
+      )}
 
       <Feed events={latestFeed} now={now} />
 

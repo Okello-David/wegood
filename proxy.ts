@@ -7,8 +7,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip static files so the install manifest and icons load without login.
+  // Skip static files so the install manifest, icons and service worker load
+  // without login. A redirect on sw.js would stop the browser updating it.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/).*)",
   ],
 };

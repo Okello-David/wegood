@@ -101,14 +101,94 @@ On the same Wi-Fi, open `http://192.168.1.168:3000`, log in, and open the email 
 Docker can run a throwaway Supabase, which is useful for testing migrations safely. It uses a few GB of disk.
 
 ```bash
-npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
+npx supabase start -x studio,imgproxy,logflare,vector,supavisor,postgres-meta,storage-api --ignore-health-check
 docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/rls_isolation.sql
 docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/rls_room_features.sql
-npx supabase stop --no-backup
+docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/rls_push.sql
+node supabase/tests/notify_routing.mjs    # needs step 11 done
+npx supabase stop              # keeps your local data
+npx supabase stop --no-backup  # throws the local data away
 ```
+
+Since Phase 3 the edge runtime is no longer excluded, because it runs the `notify` function.
 
 To reclaim the disk space afterwards, check no other project needs the images, then run:
 
 ```bash
 docker images --format '{{.Repository}}:{{.Tag}}' | grep 'ecr.aws/supabase' | xargs -r docker rmi
 ```
+
+
+## 11. Push notifications (Phase 3)
+
+Push needs three secrets. None of them may be committed.
+
+| Name | What it is | Where it goes |
+|---|---|---|
+| VAPID public key | Lets a phone check a push came from us | `.env.local` as `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, and the function as `VAPID_PUBLIC_KEY` |
+| VAPID private key | Signs every push | The function only, as `VAPID_PRIVATE_KEY` |
+| Hook secret | Lets the database prove itself to the function | The function as `NOTIFY_HOOK_SECRET`, and Supabase Vault |
+
+`VAPID_SUBJECT` is a contact for the push services, written as `mailto:you@example.com`. Use a real address on the hosted project; Apple can reject made-up ones.
+
+### Local
+
+Already done on this laptop on 2026-11-10. To redo it:
+
+```bash
+npx web-push generate-vapid-keys          # prints a public and a private key
+openssl rand -base64 32                   # a hook secret
+```
+
+Create `supabase/functions/.env` (git-ignored):
+
+```bash
+VAPID_PUBLIC_KEY=<public key>
+VAPID_PRIVATE_KEY=<private key>
+VAPID_SUBJECT=mailto:you@example.com
+NOTIFY_HOOK_SECRET=<hook secret>
+```
+
+Put the public key in `.env.local` as `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, restart Supabase, and rebuild the app.
+
+Then tell the database where the function is. Inside Docker the database reaches it through the gateway container, not `localhost`:
+
+```bash
+docker exec -i supabase_db_wegood psql -U postgres <<'SQL'
+delete from vault.secrets where name in ('notify_url', 'notify_hook_secret');
+select vault.create_secret('http://supabase_kong_wegood:8000/functions/v1/notify', 'notify_url');
+select vault.create_secret('<hook secret>', 'notify_hook_secret');
+SQL
+```
+
+Vault values live in the local database, so they survive `supabase stop` but not `stop --no-backup` or `db reset`.
+
+### Hosted project
+
+```bash
+npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:... NOTIFY_HOOK_SECRET=...
+npx supabase functions deploy notify
+```
+
+In the SQL Editor:
+
+```sql
+select vault.create_secret('https://<project-id>.supabase.co/functions/v1/notify', 'notify_url');
+select vault.create_secret('<hook secret>', 'notify_hook_secret');
+```
+
+Add `NEXT_PUBLIC_VAPID_PUBLIC_KEY` to Vercel's environment variables. Generate a fresh key pair for the hosted project; don't reuse the local one.
+
+### Debugging "my phone didn't buzz"
+
+```sql
+-- What notify decided, newest first: rule used, who was targeted, who was skipped and why.
+select created_at, kind, title, rule, targeted, skipped, sent
+from public.notification_log order by id desc limit 10;
+
+-- Did the database reach the function at all? (pg_net keeps recent answers for a few hours)
+select id, status_code, left(content, 200), error_msg, created
+from net._http_response order by id desc limit 10;
+```
+
+Function logs: `docker logs supabase_edge_runtime_wegood` locally, or Edge Functions → notify → Logs in the dashboard.
