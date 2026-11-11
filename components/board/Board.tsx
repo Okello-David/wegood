@@ -3,19 +3,35 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import EnergySheet from "@/components/board/EnergySheet";
 import Feed from "@/components/board/Feed";
 import MemberCard from "@/components/board/MemberCard";
 import StatusSheet from "@/components/board/StatusSheet";
 import Toast from "@/components/ui/Toast";
-import { FEED_LIMIT, loadFeed, loadRequests } from "@/lib/queries";
+import { useIsClient } from "@/components/ui/useIsClient";
+import { energyForUser, hasWokenUp, runningActivity } from "@/lib/battery";
+import { FEEL_LEVEL, FEELS, activityInfo } from "@/lib/energy";
+import {
+  FEED_LIMIT,
+  loadActivities,
+  loadCheckins,
+  loadFeed,
+  loadRequests,
+  loadSchedule,
+} from "@/lib/queries";
 import { callNotify, notifyErrorMessage } from "@/lib/push";
 import { useLiveRows } from "@/lib/realtime/useLiveRows";
 import { requestErrorMessage } from "@/lib/requests";
+import { nowAndNext } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/client";
 import type {
+  ActivityRow,
+  ActivityType,
+  EnergyCheckinRow,
   FeedEventRow,
   ProfileRow,
   RequestRow,
+  ScheduleItemRow,
   StatusPatch,
   StatusRow,
 } from "@/types/database";
@@ -29,6 +45,9 @@ type Props = {
   statuses: StatusRow[];
   requests: RequestRow[];
   feed: FeedEventRow[];
+  activities: ActivityRow[];
+  checkins: EnergyCheckinRow[];
+  schedule: ScheduleItemRow[];
   serverNow: number;
 };
 
@@ -44,6 +63,9 @@ export default function Board(props: Props) {
   const [now, setNow] = useState(serverNow);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [pinging, setPinging] = useState(false);
+  const [energyOpen, setEnergyOpen] = useState(false);
+  const [energyBusy, setEnergyBusy] = useState(false);
+  const isClient = useIsClient();
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
 
   // Refs, not state: changing these shouldn't redraw the board.
@@ -66,6 +88,29 @@ export default function Board(props: Props) {
     roomId,
     initialRows: props.feed,
     load: loadFeed,
+  });
+
+  // Phase 4: energy battery inputs and everyone's plans.
+  const activities = useLiveRows({
+    supabase,
+    table: "activities",
+    roomId,
+    initialRows: props.activities,
+    load: loadActivities,
+  });
+  const checkins = useLiveRows({
+    supabase,
+    table: "energy_checkins",
+    roomId,
+    initialRows: props.checkins,
+    load: loadCheckins,
+  });
+  const schedule = useLiveRows({
+    supabase,
+    table: "schedule_items",
+    roomId,
+    initialRows: props.schedule,
+    load: loadSchedule,
   });
 
   const showToast = useCallback((message: string) => {
@@ -238,6 +283,92 @@ export default function Board(props: Props) {
   const myStatus = statuses[myId];
   const myProfile = profiles[myId];
 
+  // Battery and "Now / Next" use the phone's clock and time zone, so they are
+  // only worked out in the browser (undefined during the server render).
+  const energyOf = (userId: string) =>
+    isClient
+      ? energyForUser(userId, activities.rows, checkins.rows, schedule.rows, now)
+      : undefined;
+  const planOf = (userId: string) =>
+    isClient
+      ? nowAndNext(
+          schedule.rows.filter((item) => item.user_id === userId),
+          now,
+        )
+      : undefined;
+  const myEnergy = energyOf(myId);
+  const myRunning = runningActivity(myId, activities.rows, now);
+  const iAmAwake = hasWokenUp(myId, checkins.rows, now);
+
+  // Each energy action: write, then reload so the battery updates at once
+  // (Realtime also delivers it to roommates). The sheet closes: 1-2 taps.
+  async function energyAction(action: () => Promise<string>) {
+    setEnergyBusy(true);
+    try {
+      const message = await action();
+      setEnergyOpen(false);
+      showToast(message);
+    } catch {
+      showToast("Couldn't save that. Try again.");
+    } finally {
+      setEnergyBusy(false);
+      setNow(Date.now());
+      await Promise.all([activities.refetch(), checkins.refetch()]);
+    }
+  }
+
+  async function stopActivity(row: ActivityRow) {
+    // The phone's clock for both ends of an activity (started_at is sent
+    // from here too), so a quick stop never looks like it ended before it began.
+    const end = Math.max(Date.now(), Date.parse(row.started_at) + 1000);
+    const { error } = await supabase
+      .from("activities")
+      .update({ ended_at: new Date(end).toISOString() })
+      .eq("id", row.id);
+    if (error) throw error;
+  }
+
+  async function addCheckin(kind: "wake" | "feel", feel?: number) {
+    const { error } = await supabase
+      .from("energy_checkins")
+      .insert({ room_id: roomId, kind, feel: feel ?? null });
+    if (error) throw error;
+  }
+
+  const wakeUp = () =>
+    energyAction(async () => {
+      if (myRunning?.type === "nap") await stopActivity(myRunning);
+      await addCheckin("wake");
+      return "☀️ Good morning! Battery full";
+    });
+
+  const startActivity = (type: ActivityType) =>
+    energyAction(async () => {
+      if (myRunning) await stopActivity(myRunning);
+      const { error } = await supabase
+        .from("activities")
+        .insert({ room_id: roomId, type, started_at: new Date().toISOString() });
+      if (error) throw error;
+      const info = activityInfo(type);
+      return `${info.emoji} ${info.label} started`;
+    });
+
+  const stopRunning = () =>
+    energyAction(async () => {
+      if (myRunning) await stopActivity(myRunning);
+      return "⏹️ Stopped";
+    });
+
+  const checkInFeel = (feel: number) =>
+    energyAction(async () => {
+      // Saying how you feel means you're awake: count it as waking up too,
+      // otherwise the battery would stay "?".
+      if (!iAmAwake) await addCheckin("wake");
+      await addCheckin("feel", feel);
+      const info = FEELS.find((f) => f.value === feel);
+      return `${info?.emoji ?? ""} Battery set to ${FEEL_LEVEL[feel]}%`;
+    });
+
   // Phase 3: one tap asks "Anyone home?". The Edge Function decides who gets
   // it (people at home first, otherwise everyone) and tells us what it did.
   async function pingHome() {
@@ -290,7 +421,10 @@ export default function Board(props: Props) {
             now={now}
             isMe
             notes={noteText(myId)}
+            energy={myEnergy}
+            plan={planOf(myId)}
             onOpen={() => setSheetOpen(true)}
+            onOpenEnergy={() => setEnergyOpen(true)}
           />
         )}
         {(notesFor[myId]?.length ?? 0) > 0 && (
@@ -309,6 +443,8 @@ export default function Board(props: Props) {
             status={status}
             now={now}
             notes={noteText(status.user_id)}
+            energy={energyOf(status.user_id)}
+            plan={planOf(status.user_id)}
           />
         ))}
         {roommates.length === 0 && (
@@ -343,6 +479,19 @@ export default function Board(props: Props) {
 
       {sheetOpen && myStatus && (
         <StatusSheet status={myStatus} onSave={save} onClose={() => setSheetOpen(false)} />
+      )}
+      {energyOpen && (
+        <EnergySheet
+          percent={myEnergy?.percent ?? null}
+          awake={iAmAwake}
+          running={myRunning}
+          busy={energyBusy}
+          onWake={() => void wakeUp()}
+          onStart={(type) => void startActivity(type)}
+          onStop={() => void stopRunning()}
+          onFeel={(feel) => void checkInFeel(feel)}
+          onClose={() => setEnergyOpen(false)}
+        />
       )}
       <Toast toast={toast} onDone={() => setToast(null)} />
     </main>

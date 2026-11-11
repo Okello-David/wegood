@@ -5,7 +5,13 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { Client } from "@/lib/queries";
 import type { Database } from "@/types/database";
 
-type LiveTable = "pantry_items" | "requests" | "feed_events";
+type LiveTable =
+  | "pantry_items"
+  | "requests"
+  | "feed_events"
+  | "activities"
+  | "energy_checkins"
+  | "schedule_items";
 type RowOf<T extends LiveTable> = Database["public"]["Tables"][T]["Row"];
 type Id = string | number;
 

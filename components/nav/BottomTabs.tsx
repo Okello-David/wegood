@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/", label: "Board", icon: "🏠" },
   { href: "/stuff", label: "Home Stuff", icon: "🛒" },
+  { href: "/plan", label: "Plan", icon: "📅" },
   { href: "/requests", label: "Requests", icon: "🙋" },
   { href: "/me", label: "Me", icon: "😎" },
 ] as const;
@@ -20,7 +21,7 @@ export default function BottomTabs() {
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-amber-200 bg-amber-50/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-4">
+      <ul className="mx-auto grid max-w-md grid-cols-5">
         {TABS.map((tab) => {
           const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
           return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { markManualOverride } from "@/lib/geo";
 import { BRINGING_CHIPS, ETA_CHIPS, HUNGER, LOCATIONS, locationPatch } from "@/lib/status";
 import { etaFromChip } from "@/lib/time";
 import type { StatusPatch, StatusRow } from "@/types/database";
@@ -93,9 +94,11 @@ export default function StatusSheet({ status, onSave, onClose }: Props) {
               <Choice
                 key={location.value}
                 selected={status.location_preset === location.value}
-                onClick={() =>
-                  onSave(locationPatch(location.value), `${location.emoji} ${location.label}`)
-                }
+                onClick={() => {
+                  // A choice made by hand beats the geofence until the next app open.
+                  markManualOverride();
+                  onSave(locationPatch(location.value), `${location.emoji} ${location.label}`);
+                }}
               >
                 <span aria-hidden="true">{location.emoji}</span> {location.label}
               </Choice>

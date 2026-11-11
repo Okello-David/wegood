@@ -1,4 +1,4 @@
-// Mirrors the Phase 1 to 3 migrations. Regenerate from the live project once it is
+// Mirrors the Phase 1 to 4 migrations. Regenerate from the live project once it is
 // connected: npx supabase gen types typescript --project-id <id> > types/database.ts
 
 export type LocationPreset =
@@ -116,6 +116,51 @@ type NotificationPrefs = {
   updated_at: string;
 };
 
+// Phase 4
+export type ActivityType =
+  | "class"
+  | "study"
+  | "gym"
+  | "football"
+  | "town"
+  | "work"
+  | "chill"
+  | "nap";
+export type CheckinKind = "wake" | "feel";
+
+type Activity = {
+  id: string;
+  user_id: string;
+  room_id: string;
+  type: ActivityType;
+  started_at: string;
+  ended_at: string | null;
+};
+
+type EnergyCheckin = {
+  id: string;
+  user_id: string;
+  room_id: string;
+  kind: CheckinKind;
+  feel: number | null;
+  created_at: string;
+};
+
+type ScheduleItem = {
+  id: string;
+  user_id: string;
+  room_id: string;
+  title: string;
+  type: ActivityType;
+  starts_at: string;
+  ends_at: string;
+  // 0 = Sunday ... 6 = Saturday. Empty = one-off.
+  repeat_days: number[];
+  // "YYYY-MM-DD" on the phone's calendar.
+  skipped_dates: string[];
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -177,6 +222,32 @@ export type Database = {
         Update: Partial<Omit<NotificationPrefs, "user_id" | "updated_at">>;
         Relationships: [];
       };
+      // user_id defaults to the signed-in user, so it isn't in the insert grant.
+      activities: {
+        Row: Activity;
+        Insert: Pick<Activity, "room_id" | "type"> &
+          Partial<Pick<Activity, "started_at" | "ended_at">>;
+        Update: Partial<Pick<Activity, "ended_at">>;
+        Relationships: [];
+      };
+      energy_checkins: {
+        Row: EnergyCheckin;
+        Insert: Pick<EnergyCheckin, "room_id" | "kind"> & Partial<Pick<EnergyCheckin, "feel">>;
+        Update: never;
+        Relationships: [];
+      };
+      schedule_items: {
+        Row: ScheduleItem;
+        Insert: Pick<ScheduleItem, "room_id" | "title" | "type" | "starts_at" | "ends_at"> &
+          Partial<Pick<ScheduleItem, "repeat_days" | "skipped_dates">>;
+        Update: Partial<
+          Pick<
+            ScheduleItem,
+            "title" | "type" | "starts_at" | "ends_at" | "repeat_days" | "skipped_dates"
+          >
+        >;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -194,8 +265,9 @@ export type Database = {
         Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string };
         Returns: undefined;
       };
+      set_geo_home: { Args: { p_at_home: boolean }; Returns: undefined };
     };
-    Enums: { location_preset: LocationPreset };
+    Enums: { location_preset: LocationPreset; activity_type: ActivityType };
     CompositeTypes: { [_ in never]: never };
   };
 };
@@ -208,3 +280,6 @@ export type RequestRow = RoomRequest;
 export type FeedEventRow = FeedEvent;
 export type NotificationPrefsRow = NotificationPrefs;
 export type NotificationPrefsPatch = Database["public"]["Tables"]["notification_prefs"]["Update"];
+export type ActivityRow = Activity;
+export type EnergyCheckinRow = EnergyCheckin;
+export type ScheduleItemRow = ScheduleItem;

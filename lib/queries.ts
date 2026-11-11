@@ -46,3 +46,39 @@ export async function loadProfiles(supabase: Client) {
   // RLS limits this to me and my roommates.
   return unwrap(await supabase.from("profiles").select("*"));
 }
+
+// Phase 4. The battery needs the last wake-up (up to 24 h ago) and what
+// happened since; 30 h leaves room for an activity that began before waking.
+const ENERGY_WINDOW_MS = 30 * 60 * 60_000;
+
+export async function loadActivities(supabase: Client, roomId: string) {
+  const since = new Date(Date.now() - ENERGY_WINDOW_MS).toISOString();
+  return unwrap(
+    await supabase
+      .from("activities")
+      .select("*")
+      .eq("room_id", roomId)
+      .gte("started_at", since)
+      .order("started_at"),
+  );
+}
+
+export async function loadCheckins(supabase: Client, roomId: string) {
+  const since = new Date(Date.now() - ENERGY_WINDOW_MS).toISOString();
+  return unwrap(
+    await supabase
+      .from("energy_checkins")
+      .select("*")
+      .eq("room_id", roomId)
+      .gte("created_at", since)
+      .order("created_at"),
+  );
+}
+
+// Whole schedules: weekly items started long ago still repeat today. A room
+// of ~15 people has at most a few hundred rows.
+export async function loadSchedule(supabase: Client, roomId: string) {
+  return unwrap(
+    await supabase.from("schedule_items").select("*").eq("room_id", roomId).order("starts_at"),
+  );
+}

@@ -118,3 +118,50 @@ Every send is written to `notification_log` with the rule used, who was targeted
 |---|---|---|
 | `wegood-escalate-urgent` | 5 min | Marks `requests.escalated_at` and notifies everyone. One UPDATE both picks and marks the rows, which is why it can only fire once per request |
 | `wegood-clear-expired-statuses` | 15 min | Clears bringing, mood and ETA past `expires_at`, without touching `updated_at`, so an old card doesn't look fresh |
+
+## Smart features (Phase 4)
+
+### Geofence: only "home: yes/no" leaves the phone
+
+```text
+Admin, once:   phone GPS ──► rooms.home_lat / home_lng / radius_m   (the HOUSE, not a person)
+
+Everyone, on app open / back to foreground (if their per-device switch is on):
+  phone GPS ──► haversine distance to the room's home point   (in the browser)
+            ──► rpc set_geo_home(p_at_home: true | false)      (the only thing sent)
+```
+
+- `components/geo/AutoHome.tsx` (mounted in the in-room layout) does the check. `set_geo_home()` takes a single boolean, so coordinates *can't* be sent through it.
+- If the browser's accuracy circle is bigger than the home circle, nothing changes (the answer would be a guess). Permission denied switches the feature off on that device; a timeout just waits for the next open.
+- Picking a location by hand wins until the next app open: a fresh page load, or coming back after 30+ minutes in the background.
+- `set_geo_home()` also refreshes `at_home_updated_at` when the answer is the same ("still home"), so the Phase 3 routing keeps treating that person as home. The phone re-sends an unchanged answer at most every 10 minutes.
+- `supabase/tests/rls_smart.sql` fails if any column that looks like coordinates appears anywhere except `rooms.home_lat/home_lng`.
+
+**Why no background tracking:** a web app only runs while it's open. There is no background geolocation API for the web, the service worker can't read location, and iOS and Android freeze hidden tabs and installed PWAs within seconds. Native apps can register real OS geofences; a PWA can't. So the status updates when you *open* the app, and the 3-hour staleness rule covers the gaps.
+
+### Energy battery
+
+`lib/energy.ts` is a pure function, `computeEnergy(wakeTime, activities, checkins, now)`:
+
+1. Start: 100% at the latest wake-up in the last 24 h. No wake-up means "?" (never a made-up number).
+2. A later "how do you feel?" check-in resets the level (1→15% … 5→95%) from that moment.
+3. Then, piece by piece: -4%/h awake, plus the hardest running activity's extra drain (class 6, study 5, gym/football 15, town 8, work 7, chill 0). A nap gives +40%/h (+20 per 30 min) instead. Clamped 0-100 after each piece.
+4. Overlaps count once. An activity nobody stopped counts for at most 4 h.
+
+Activities come from two places: ones started by hand (`activities`) and Plan blocks that have started and weren't skipped (`lib/schedule.ts` → `scheduleAsActivities`). Battery and "Now / Next" are computed only in the browser, because they depend on the phone's time zone.
+
+### Schedule
+
+`schedule_items` holds one-offs and weekly items (`repeat_days`, 0 = Sunday). A weekly item repeats the time of day of its first `starts_at` from that date on; `skipped_dates` removes single days. Dragging a weekly block shifts the whole series.
+
+The timeline uses plain pointer events: hold ~0.3 s then drag (so a quick swipe still scrolls), resize from the bottom bar (`touch-action: none`), 15-minute snapping. While a block is lifted, a non-passive `touchmove` listener stops the page scrolling; React's own touch listeners can't do that.
+
+### New tables
+
+| Table | Read | Write |
+|---|---|---|
+| `activities` | Room members | Owner: insert, stop (`ended_at` only), delete |
+| `energy_checkins` | Room members | Owner: insert, delete (no edits) |
+| `schedule_items` | Room members | Owner: insert, update, delete |
+
+All three have `room_id` (Realtime filters by it) and a foreign key to `room_members`, so leaving the room removes them. `user_id` defaults to the signed-in user.

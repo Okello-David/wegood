@@ -1,18 +1,41 @@
 # Progress
 
-Last updated: 2026-11-10
+Last updated: 2026-11-11
 
 | Phase | Status |
 |---|---|
 | 0. Setup | Done, except hosted Supabase connection and Vercel |
 | 1. MVP status board | Code complete, tested locally. **Not yet on the real project** |
 | 2. Room features | Done. Tested locally, including the laptop + iPhone checklist (2026-11-10). **Not yet on the real project** |
-| 3. Push notifications | Code complete, tested locally (automated). **Needs your laptop browser test; phone test waits for https** |
-| 4. Geofence, energy, schedule | Not started |
+| 3. Push notifications | Committed. Automated tests pass. **Manual browser checklist still open; phone test waits for https** |
+| 4. Geofence, energy, schedule | Committed on `phase-4-smart`, automated tests pass. **Manual checklist still open** |
 | 5. Fun layer | Not started |
 | 6. CI, AWS, docs | Not started |
 
-## Pick up here (written 2026-11-10, end of session)
+## Pick up here (written 2026-11-11)
+
+**Where we stopped:** Phase 3 is committed (`dc336f1`) with its manual checklist still open. Phase 4 is committed on branch `phase-4-smart` and passes every automated check (below). Nothing of Phase 4 has been clicked through in a real browser yet.
+
+**To do next, in order:**
+1. Start everything (same start commands as below), then run the "Phase 4 manual test checklist" further down, on **http://localhost:3000** (location needs https or localhost).
+2. Schedule drag on the phones: Android Chrome and iPhone Safari at http://192.168.1.168:3000 (drag works over plain http; only auto-home doesn't).
+3. Also run the Phase 3 manual checklist (push notifications), still open.
+4. Tell Claude what failed or felt off; Claude fixes and commits (never the LAN IP lines in `supabase/config.toml`).
+5. Then Phase 5 (fun layer).
+
+**Run every automated check:**
+
+```bash
+for f in rls_isolation rls_room_features rls_push rls_smart; do
+  docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/$f.sql
+done
+node supabase/tests/notify_routing.mjs
+npm run lint && npm run typecheck && npm test && npm run build
+```
+
+New migration: `npx supabase migration up` (already applied on this laptop).
+
+## Phase 3 hand-over notes (written 2026-11-10)
 
 **Where we stopped:** Phase 3 is built, passes every automated check locally and was committed on 2026-11-11 with the manual browser checklist **still open** (no real notification seen on a screen yet). Phase 4 continues on branch `phase-4-smart`; run the Phase 3 checklist whenever convenient.
 
@@ -232,6 +255,71 @@ Phase 3 decisions:
 - `notification_log` has no clean-up yet; add one with the feed clean-up.
 - `npm:web-push` runs fine in the Edge runtime; no fallback library was needed.
 
+## Phase 4 test record (2026-11-11, local Supabase)
+
+| Check | Result |
+|---|---|
+| Migration `20261111120000_smart_features.sql` applies | Pass |
+| `supabase/tests/rls_smart.sql` (new) | Pass |
+| It catches deliberate weaknesses | Pass, 3 caught: schedules readable by outsiders, a `set_geo_home` that ignores the preset/owner rules, a `statuses.user_lat` column |
+| Phase 1-3 RLS tests, `notify_routing.mjs` (touch_status changed) | Pass |
+| Unit tests (Vitest): 12 energy, 8 schedule, 5 geo, 1 latestWake | 26/26 pass |
+| Lint, type-check, production build | Pass |
+| Signed in (magic link via `/auth/confirm`): `/`, `/plan`, `/me`, `/stuff`, `/requests` | All 200 |
+
+What `rls_smart.sql` proves: outsiders can't read or write the three new tables or move another room's home; members read roommates' plans/activities but can't change them; only admins set the home point; `user_id` can't be faked; activities can only be stopped, check-ins never edited; bad feel/weekday values are refused; `set_geo_home` only changes your own row, refreshes "still home", and the refresh flag doesn't leak to the next edit; anonymous visitors get nothing; no coordinate-like column exists except the room's.
+
+**Not tested yet:** everything in the browser (checklist below), and real phones.
+
+### Phase 4 manual test checklist
+
+Laptop: **http://localhost:3000**, two Chrome profiles (`me@test.com` is the room admin, `pro@hot.com` a member). For fake locations: DevTools (F12) → ⋮ → More tools → **Sensors** → Location → "Other…" and type a latitude/longitude.
+
+1. Auto-home: setup (admin)
+   - [ ] Me shows a **📍 Auto-home** card. As admin: Sensors set to e.g. `0.3476, 32.5825`, tap **I'm at home now, set this as home**, allow location. Toast "Home saved 🏠".
+   - [ ] Radius slider goes 30-150 m and saves (toast) a moment after you let go.
+   - [ ] As `pro@hot.com` (member): no admin button or slider, only the switch.
+2. Auto-home: the check (acceptance)
+   - [ ] Switch **Auto-detect when I'm home** on. "Last check: 🏠 You're home". Board: your chip says Home with an **auto** badge.
+   - [ ] DevTools → **Network** tab, filter `set_geo_home`. Click the request → Payload: exactly `{"p_at_home":true}`. Nothing else. (Screenshot this for the acceptance criterion.)
+   - [ ] Sensors: change to `0.3576, 32.5825` (about 1 km away). Switch to another tab and back: within a few seconds your chip flips (Unknown, **auto**) on both profiles. Payload `{"p_at_home":false}`.
+   - [ ] Pick **Campus** by hand in ✏️: badge says **manual**. Switch tabs and back: it stays Campus (manual wins). Reload the page: auto-home takes over again.
+   - [ ] Sensors → Location → "Location unavailable": switching tabs changes nothing.
+   - [ ] Block location for the site (padlock icon → Location → Block), switch tabs and back: the switch turns off and the card says location is blocked.
+3. Energy battery
+   - [ ] Every card shows a battery. Before waking up: **?** with "Tap to wake up" on yours, "not up yet?" on others.
+   - [ ] Tap your battery → **☀️ I just woke up**: 100%, green, labelled "estimate". The other profile sees it live.
+   - [ ] Start **⚽ Football**: the sheet closes, toast. Reopen: "Stop ⚽ Football (since …)". Stop works.
+   - [ ] Feel check-in 😩 (2): battery jumps to 35%, red/amber colour.
+4. Plan (My day)
+   - [ ] New **📅 Plan** tab (5 tabs fit; easy to hit). Opens at the current time with a red "now" line.
+   - [ ] Tap an empty slot → sheet → tap ⚽: a 1-hour Football block appears (2 taps).
+   - [ ] Tap a block → edit title/type, **Repeat weekly** with day chips (e.g. Mon + Wed), Save. 🔁 shows on it. ‹ › to next week's Monday: it's there.
+   - [ ] Mouse: drag a block to move (snaps to 15 min); drag the bottom bar to resize.
+   - [ ] **Skip it this day only** removes one day; the other days stay.
+   - [ ] A block that covers "now" makes your battery drain faster (Plan blocks count automatically); after skipping it, it no longer counts.
+5. Board and Who's free?
+   - [ ] Board cards show "Now: 🎓 … until 12:00 · Next: ⚽ … at 16:00".
+   - [ ] **Who's free?**: everyone side by side for 6 hours, busy blocks coloured, FREE badge for whoever is free now.
+6. Phones (http://192.168.1.168:3000)
+   - [ ] Android Chrome: swipe over blocks scrolls the page; hold ~0.3 s then drag moves the block; bottom bar resizes; no text-selection pop-up.
+   - [ ] iPhone Safari: same three checks; no magnifier/callout on long-press.
+   - [ ] Auto-home card shows "Location only works on https" (expected on the LAN address).
+
+**Problems found:**
+- (none yet)
+
+Phase 4 decisions:
+- `activities` and `energy_checkins` got a `room_id` (not in the original spec): Realtime filters by it, and the foreign key to `room_members` cleans up when someone leaves.
+- Auto-home is a per-device switch (localStorage); the location prompt only appears when you tap it.
+- Manual location wins until the next app open = page reload, or returning after 30+ min in the background (an installed PWA can stay in memory for days).
+- When the geofence says "away" and you were "Home", the location becomes Unknown (we don't know where you went). "Sleeping" is kept when you're home.
+- Energy overlaps count once (hardest activity wins). Forgotten activities count for at most 4 h. "Woke up today" = a wake-up in the last 24 h, so staying up past midnight works. A feel check-in without a wake-up counts as waking up.
+- Times use the phone's clock: started/ended times are sent from the phone, so a quick Stop can't end before it started.
+- Drag without a library: pointer events + long-press + a non-passive touchmove listener. The resize bar's hit area is 28 px (smaller than 44 px so it doesn't cover short blocks).
+- Battery and "Now / Next" only render in the browser (time zone), so the server HTML shows "…" for a moment.
+- `energy_checkins` and `activities` have no clean-up yet; add it with the feed/log clean-up.
+
 ## To finish Phase 1
 
 Details are in [SETUP.md](SETUP.md).
@@ -251,4 +339,4 @@ Details are in [SETUP.md](SETUP.md).
 
 ## Git
 
-Phase 3 work is on branch `phase-3-push` (branched from `phase-2-room-features`, which came from `phase-1-status-board`); `main` doesn't exist yet. To make this branch `main`, run `git branch -m main`.
+Phase 4 work is on branch `phase-4-smart` (branched from `phase-3-push` after committing Phase 3). Phase 3 work is on branch `phase-3-push` (branched from `phase-2-room-features`, which came from `phase-1-status-board`); `main` doesn't exist yet. To make this branch `main`, run `git branch -m main`.
