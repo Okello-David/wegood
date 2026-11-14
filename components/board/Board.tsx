@@ -3,19 +3,24 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import Avatar from "@/components/board/Avatar";
 import EnergySheet from "@/components/board/EnergySheet";
 import Feed from "@/components/board/Feed";
+import Leaderboard from "@/components/board/Leaderboard";
 import MemberCard from "@/components/board/MemberCard";
 import StatusSheet from "@/components/board/StatusSheet";
 import Toast from "@/components/ui/Toast";
 import { useIsClient } from "@/components/ui/useIsClient";
 import { energyForUser, hasWokenUp, runningActivity } from "@/lib/battery";
 import { FEEL_LEVEL, FEELS, activityInfo } from "@/lib/energy";
+import { haptic } from "@/lib/haptics";
 import {
   FEED_LIMIT,
   loadActivities,
   loadCheckins,
   loadFeed,
+  loadLeaderboard,
+  loadRecentPoints,
   loadRequests,
   loadSchedule,
 } from "@/lib/queries";
@@ -29,6 +34,7 @@ import type {
   ActivityType,
   EnergyCheckinRow,
   FeedEventRow,
+  PointEventRow,
   ProfileRow,
   RequestRow,
   ScheduleItemRow,
@@ -48,6 +54,11 @@ type Props = {
   activities: ActivityRow[];
   checkins: EnergyCheckinRow[];
   schedule: ScheduleItemRow[];
+  // Phase 5
+  leaderboard: { user_id: string; points: number }[];
+  points: PointEventRow[];
+  // This week's trophy holder(s): last week's MVP.
+  mvps: string[];
   serverNow: number;
 };
 
@@ -112,6 +123,36 @@ export default function Board(props: Props) {
     initialRows: props.schedule,
     load: loadSchedule,
   });
+
+  // Phase 5: the leaderboard. Realtime tells us when points change (the
+  // point_events rows); the totals then come from the database, which knows
+  // when the room's week started.
+  const points = useLiveRows({
+    supabase,
+    table: "point_events",
+    roomId,
+    initialRows: props.points,
+    load: loadRecentPoints,
+  });
+  const [leaderboard, setLeaderboard] = useState(props.leaderboard);
+  const lastPointId = points.rows.reduce((max, row) => Math.max(max, row.id), 0);
+  const firstPointId = useRef(lastPointId);
+  useEffect(() => {
+    // The first render already has fresh totals from the server.
+    if (lastPointId === firstPointId.current) return;
+    let cancelled = false;
+    loadLeaderboard(supabase, roomId)
+      .then((rows) => {
+        if (!cancelled) setLeaderboard(rows);
+      })
+      .catch(() => {
+        // Offline: keep the old totals; the next change retries.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, roomId, lastPointId]);
+  const mvpSet = useMemo(() => new Set(props.mvps), [props.mvps]);
 
   const showToast = useCallback((message: string) => {
     toastId.current += 1;
@@ -214,6 +255,7 @@ export default function Board(props: Props) {
 
   const save = useCallback(
     (patch: StatusPatch, message: string) => {
+      haptic();
       setStatuses((current) => ({ ...current, [myId]: { ...current[myId], ...patch } }));
       pendingSaves.current += 1;
 
@@ -372,6 +414,7 @@ export default function Board(props: Props) {
   // Phase 3: one tap asks "Anyone home?". The Edge Function decides who gets
   // it (people at home first, otherwise everyone) and tells us what it did.
   async function pingHome() {
+    haptic();
     setPinging(true);
     const answer = await callNotify(supabase, {
       kind: "ping",
@@ -400,18 +443,25 @@ export default function Board(props: Props) {
       <header className="mb-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-bold">{roomName}</h1>
-          <p className="text-sm text-stone-600">
+          <p className="text-sm text-muted">
             Invite code: <span className="font-mono font-semibold">{inviteCode}</span>
           </p>
         </div>
         <Link
           href="/me"
           aria-label="Edit profile"
-          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl"
+          className="flex shrink-0 rounded-full"
         >
-          {myProfile?.avatar_emoji ?? "🙂"}
+          <Avatar
+            userId={myId}
+            emoji={myProfile?.avatar_emoji ?? "🙂"}
+            color={myProfile?.color ?? null}
+            mvp={mvpSet.has(myId)}
+          />
         </Link>
       </header>
+
+      <Leaderboard rows={leaderboard} profiles={profiles} />
 
       <div className="flex flex-col gap-3">
         {myStatus && myProfile && (
@@ -420,6 +470,7 @@ export default function Board(props: Props) {
             status={myStatus}
             now={now}
             isMe
+            mvp={mvpSet.has(myId)}
             notes={noteText(myId)}
             energy={myEnergy}
             plan={planOf(myId)}
@@ -442,13 +493,14 @@ export default function Board(props: Props) {
             profile={profiles[status.user_id]}
             status={status}
             now={now}
+            mvp={mvpSet.has(status.user_id)}
             notes={noteText(status.user_id)}
             energy={energyOf(status.user_id)}
             plan={planOf(status.user_id)}
           />
         ))}
         {roommates.length === 0 && (
-          <p className="rounded-2xl bg-white/60 p-4 text-center">
+          <p className="rounded-2xl bg-card/60 p-4 text-center">
             It&apos;s quiet in here. Share code{" "}
             <span className="font-mono font-semibold">{inviteCode}</span> with your roommates.
           </p>
@@ -472,7 +524,7 @@ export default function Board(props: Props) {
         type="button"
         onClick={() => setSheetOpen(true)}
         aria-label="Update my status"
-        className="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex size-16 items-center justify-center rounded-full bg-stone-900 text-3xl text-white shadow-lg"
+        className="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex size-16 items-center justify-center rounded-full bg-primary text-3xl text-on-primary shadow-lg"
       >
         ✏️
       </button>

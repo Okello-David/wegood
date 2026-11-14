@@ -40,13 +40,13 @@ export default function OnboardingForm() {
     void run((client) => client.rpc("join_room", { p_code: code }));
   }
 
-  const inputClass = "min-h-12 rounded-xl border border-stone-300 bg-white px-4 text-base";
+  const inputClass = "min-h-12 rounded-xl border border-line bg-card px-4 text-base";
   const buttonClass =
-    "min-h-12 rounded-xl bg-stone-900 px-4 text-lg font-semibold text-white disabled:opacity-60";
+    "min-h-12 rounded-xl bg-primary px-4 text-lg font-semibold text-on-primary disabled:opacity-60";
 
   return (
     <div className="flex flex-col gap-6">
-      <form onSubmit={createRoom} className="flex flex-col gap-3 rounded-2xl bg-white/70 p-4">
+      <form onSubmit={createRoom} className="flex flex-col gap-3 rounded-2xl bg-card/70 p-4">
         <label htmlFor="room-name" className="text-lg font-semibold">
           Create a room
         </label>
@@ -64,7 +64,7 @@ export default function OnboardingForm() {
         </button>
       </form>
 
-      <form onSubmit={joinRoom} className="flex flex-col gap-3 rounded-2xl bg-white/70 p-4">
+      <form onSubmit={joinRoom} className="flex flex-col gap-3 rounded-2xl bg-card/70 p-4">
         <label htmlFor="room-code" className="text-lg font-semibold">
           Join with code
         </label>
@@ -85,7 +85,7 @@ export default function OnboardingForm() {
       </form>
 
       {error && (
-        <p className="text-center text-sm text-red-700" role="alert">
+        <p className="text-center text-sm text-red-700 dark:text-red-300" role="alert">
           {error}
         </p>
       )}

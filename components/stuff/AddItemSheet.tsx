@@ -40,7 +40,7 @@ export default function AddItemSheet({ onAdd, onClose }: Props) {
               aria-pressed={kind === option.value}
               onClick={() => setKind(option.value)}
               className={`min-h-14 rounded-xl font-semibold ${
-                kind === option.value ? "bg-stone-900 text-white" : "bg-stone-100"
+                kind === option.value ? "bg-primary text-on-primary" : "bg-chip"
               }`}
             >
               {option.label}
@@ -56,12 +56,12 @@ export default function AddItemSheet({ onAdd, onClose }: Props) {
           placeholder={kind === "grocery" ? "e.g. Tomatoes" : "e.g. Leftover pilau"}
           aria-label="Item name"
           // text-base (16px) stops iPhone zooming into the field.
-          className="min-h-12 rounded-xl border border-stone-300 bg-white px-4 text-base"
+          className="min-h-12 rounded-xl border border-line bg-card px-4 text-base"
         />
         <button
           type="submit"
           disabled={saving || !name.trim()}
-          className="min-h-14 rounded-xl bg-stone-900 font-semibold text-white disabled:opacity-50"
+          className="min-h-14 rounded-xl bg-primary font-semibold text-on-primary disabled:opacity-50"
         >
           Add
         </button>

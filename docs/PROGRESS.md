@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-11-11
+Last updated: 2026-11-14
 
 | Phase | Status |
 |---|---|
@@ -9,24 +9,33 @@ Last updated: 2026-11-11
 | 2. Room features | Done. Tested locally, including the laptop + iPhone checklist (2026-11-10). **Not yet on the real project** |
 | 3. Push notifications | Committed. Automated tests pass. **Manual browser checklist still open; phone test waits for https** |
 | 4. Geofence, energy, schedule | Committed on `phase-4-smart`, automated tests pass. **Manual checklist still open** |
-| 5. Fun layer | Not started |
+| 5. Fun layer | Committed on `phase-5-fun`, automated tests pass. You report it seems to work (2026-11-14); **formal manual checklist still open** |
 | 6. CI, AWS, docs | Not started |
 
-## Pick up here (written 2026-11-11)
+## Pick up here (written 2026-11-14)
 
-**Where we stopped:** Phase 3 is committed (`dc336f1`) with its manual checklist still open. Phase 4 is committed on branch `phase-4-smart` and passes every automated check (below). Nothing of Phase 4 has been clicked through in a real browser yet.
+**Where we stopped:** Phase 5 (fun layer) is committed on branch `phase-5-fun` and passes every automated check (Phase 5 test record below). You tried it and said things seem to work, but the checklist boxes weren't ticked one by one. Three manual checklists are still open: Phase 3 (push), Phase 4 (smart features) and Phase 5 (fun layer).
 
 **To do next, in order:**
-1. Start everything (same start commands as below), then run the "Phase 4 manual test checklist" further down, on **http://localhost:3000** (location needs https or localhost).
-2. Schedule drag on the phones: Android Chrome and iPhone Safari at http://192.168.1.168:3000 (drag works over plain http; only auto-home doesn't).
-3. Also run the Phase 3 manual checklist (push notifications), still open.
-4. Tell Claude what failed or felt off; Claude fixes and commits (never the LAN IP lines in `supabase/config.toml`).
-5. Then Phase 5 (fun layer).
+1. Start everything (commands below), then run the "Phase 5 manual test checklist" on **http://localhost:3000** (two Chrome profiles) and the phone items at http://192.168.1.168:3000.
+2. When you have time, the Phase 4 and Phase 3 checklists.
+3. Tell Claude what failed or felt off; Claude fixes and commits (never `supabase/config.toml`: its only changes are the LAN IP lines).
+4. Then Phase 6 (CI, AWS, docs).
+
+**Start commands** (the app server stops when the Claude session closes):
+
+```bash
+nvm use
+npx supabase start -x studio,imgproxy,logflare,vector,supavisor,postgres-meta,storage-api --ignore-health-check
+npm run build && npm run start -- -H 0.0.0.0
+```
+
+If Supabase was already running without the edge runtime (`docker ps | grep edge` shows nothing), run `npx supabase stop` first, then the start line. `stop` keeps the data.
 
 **Run every automated check:**
 
 ```bash
-for f in rls_isolation rls_room_features rls_push rls_smart; do
+for f in rls_isolation rls_room_features rls_push rls_smart rls_fun; do
   docker exec -i supabase_db_wegood psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/$f.sql
 done
 node supabase/tests/notify_routing.mjs
@@ -320,6 +329,82 @@ Phase 4 decisions:
 - Battery and "Now / Next" only render in the browser (time zone), so the server HTML shows "…" for a moment.
 - `energy_checkins` and `activities` have no clean-up yet; add it with the feed/log clean-up.
 
+## Phase 5 test record (2026-11-14, local Supabase)
+
+| Check | Result |
+|---|---|
+| Migration `20261114120000_fun_layer.sql` applies | Pass |
+| `supabase/tests/rls_fun.sql` (new, 33 checks) | Pass |
+| It catches deliberate weaknesses | Pass, 2 caught: an insert grant + policy on `point_events` ("a member inserted points for themselves"), and an open read policy ("outsider read 5 point events") |
+| Phase 1-4 RLS tests | Pass |
+| `notify_routing.mjs` (adds: browser can't send `starving`/`mvp`; they skip the rate limit; Fun switch and quiet hours apply) | Pass |
+| Unit tests (Vitest): adds 8 for captions (48 captions, every situation reachable, steady for 10 min) | 34/34 pass |
+| Lint, type-check, production build | Pass |
+| Secrets (VAPID private key, hook secret, service role key) in `.next/` or `public/` | Not found |
+| Lighthouse 12.8 (mobile, signed-in Board) | Accessibility **100**. Best Practices 79, only because of plain http (fixed by Vercel) and 401s that come from how Lighthouse was given the login, not from the app |
+| Manifest: 192, 512 and maskable 512 icons load | Pass |
+
+Found and fixed while testing:
+- **Stale cards failed colour contrast** (2.9:1). The whole card was faded with `opacity-60`, text included. Now only the background fades (`bg-card/50`, no shadow), and text keeps full contrast.
+- **`/favicon.ico` was missing** (a 404 in every browser's console). Added `app/favicon.ico`, made from the new logo.
+- The Phase 2 tile squeeze now also respects reduced motion.
+
+What `rls_fun.sql` proves: members can't insert, update or delete points or MVPs, or call `private.award_points`; outsiders read nothing; your own request pays 0; claim + done by someone else pays 10 (urgent 15) exactly once; a visitor note pays 3 only when the recipient acknowledges it; restock pays 5 once (not for a quick out→have, not twice in 12 h); auto-messages fire once per person per day, again after 24 h, never under 3 h of starving; the MVP job is safe to run twice, ties give co-MVPs, a 0-point week has no MVP; RLS is on for every table; both cron jobs exist.
+
+**Not tested yet:** everything in a real browser (checklist below), and phones.
+
+### Phase 5 manual test checklist
+
+Laptop: **http://localhost:3000**, two Chrome profiles (`me@test.com`, `pro@hot.com`), plus a private window as a third account (`frien@test.com`) for points. SQL snippets run with:
+`docker exec -it supabase_db_wegood psql -U postgres`
+
+1. Captions
+   - [ ] Every card shows an italic caption under "updated …" that fits the status (e.g. set Hunger to Starving → a hungry line).
+   - [ ] It doesn't change when you reload or when someone else updates. It may change after 10 minutes.
+   - [ ] Two people in the same situation usually have different lines. Nothing is mean or awkward. Note any line you'd like changed.
+2. Points and leaderboard
+   - [ ] Fresh week: under the header it says "No points yet this week. Be the hero."
+   - [ ] Account 1 creates an errand, account 2 taps **I got it**, then **Done ✅**: confetti, toast "Done! +10 points 🎉", a buzz on Android. The leaderboard shows account 2 with 10 on **all** devices without refreshing.
+   - [ ] An **Urgent** request gives 15.
+   - [ ] Your own request (you create it and tap Done) gives no points and no confetti.
+   - [ ] Visitor note: A writes one for B, B taps **Got it 👍** → A gets 3.
+   - [ ] Home Stuff: mark Sugar **Out**, then right away back to have: no points. (To test the +5, run `update pantry_items set updated_at = now() - interval '11 minutes' where name = 'Sugar';` first, then tap it back to have.)
+3. Trophy (MVP)
+   - [ ] Pretend last week happened: in psql run
+     `update point_events set created_at = created_at - interval '7 days';` then `select private.weekly_mvp_job();`
+   - [ ] The feed shows "🏆 … is Room MVP of the week with … points!", and that person's avatar has a 🏆 after a reload.
+   - [ ] Run `select private.weekly_mvp_job();` again: no second feed line.
+4. Auto-messages
+   - [ ] Set yourself to Starving, then in psql:
+     `update statuses set hunger_updated_at = now() - interval '4 hours' where hunger = 3;` then `select private.run_auto_messages();`
+   - [ ] The feed says "… has been starving for 4 hours. Someone check on … 👀". The other profile gets a push (if notifications are on and it's not quiet hours).
+   - [ ] Run `select private.run_auto_messages();` again: no second message.
+   - [ ] Me → **😂 Fun messages** off in the other profile, repeat (first `delete from auto_message_log;`): feed line yes, push no.
+5. Animations and reduced motion
+   - [ ] Your avatar ring pulses for 2 minutes after you change your status. A roommate's card bounces once when they change theirs.
+   - [ ] DevTools → ⋮ → More tools → **Rendering** → "Emulate CSS prefers-reduced-motion: reduce". Then no pulse, no bounce, no confetti, and no skeleton shimmer.
+6. Polish
+   - [ ] Switch tabs while the network is slow (DevTools → Network → "Slow 4G"): grey card-shaped skeletons show instead of a blank page.
+   - [ ] Empty states: Requests "No requests. Suspiciously peaceful. 🕊️", Shopping list "Nothing to buy…", Feed "Nothing happened yet…".
+   - [ ] Laptop dark mode (or DevTools → Rendering → prefers-color-scheme: dark): every tab is readable, with no white boxes and no invisible text. Check sheets, toasts, the Plan timeline and the Me cards too.
+7. Phones (http://192.168.1.168:3000)
+   - [ ] Android Chrome and iPhone Safari in dark mode: same as 6.
+   - [ ] Add to Home Screen: the new speech-bubble icon shows (Android may crop it into a circle; the "?" must stay whole).
+   - [ ] Android: buttons give a tiny buzz (status chips, ping, claim, done). iPhone: no buzz (expected).
+
+**Problems found:**
+- (none yet)
+
+Phase 5 decisions:
+- Points, MVPs and auto-messages are written only by the database (triggers + pg_cron); browsers can only read them. Reasons in ARCHITECTURE.md.
+- `point_events.source_id` (not in the spec) makes "one payout per request" a unique index.
+- Visitor notes pay only when the recipient acknowledges them; restock pays only after 10 min out and once per item per 12 h. Both stop point farming.
+- The MVP job runs hourly and only crowns rooms not crowned yet; the push waits until Monday 08:00 local.
+- Starving is ignored after 12 h (a forgotten status shouldn't nag every day). The message repeats the name instead of "him/her".
+- Dark mode follows the phone, no toggle. No animation library (CSS keyframes are enough). No iPhone splash images (they need about 10 fixed sizes); iPhone shows the background colour.
+- Stale cards fade only their background now (see test record).
+- `auto_message_log` and `point_events` have no clean-up yet; add it with the feed/log clean-up (Phase 6).
+
 ## To finish Phase 1
 
 Details are in [SETUP.md](SETUP.md).
@@ -339,4 +424,4 @@ Details are in [SETUP.md](SETUP.md).
 
 ## Git
 
-Phase 4 work is on branch `phase-4-smart` (branched from `phase-3-push` after committing Phase 3). Phase 3 work is on branch `phase-3-push` (branched from `phase-2-room-features`, which came from `phase-1-status-board`); `main` doesn't exist yet. To make this branch `main`, run `git branch -m main`.
+Phase 5 work is on branch `phase-5-fun` (from `phase-4-smart`). Phase 4 work is on branch `phase-4-smart` (branched from `phase-3-push` after committing Phase 3). Phase 3 work is on branch `phase-3-push` (branched from `phase-2-room-features`, which came from `phase-1-status-board`); `main` doesn't exist yet. To make this branch `main`, run `git branch -m main`.

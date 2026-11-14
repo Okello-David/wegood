@@ -71,7 +71,7 @@ export default function ItemTile({ item, onTap, onHold }: Props) {
       // taking over the long-press.
       className={`flex min-h-20 touch-manipulation flex-col items-start justify-between rounded-2xl border-2 p-3 text-left transition-colors duration-200 select-none [-webkit-touch-callout:none] motion-reduce:animate-none ${
         style.tile
-      } ${popping ? "animate-pop" : ""}`}
+      } ${popping ? "motion-safe:animate-pop" : ""}`}
     >
       <span className="line-clamp-2 font-bold break-words">{item.name}</span>
       <span className="text-sm font-semibold">

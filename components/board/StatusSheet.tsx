@@ -27,7 +27,7 @@ function Choice({
       aria-pressed={selected}
       onClick={onClick}
       className={`min-h-14 rounded-xl px-2 font-semibold ${
-        selected ? "bg-stone-900 text-white" : "bg-stone-100"
+        selected ? "bg-primary text-on-primary" : "bg-chip"
       }`}
     >
       {children}
@@ -73,7 +73,7 @@ export default function StatusSheet({ status, onSave, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label="Update my status"
-        className="relative max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+        className="relative max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-card px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-bold">What&apos;s the situation?</h2>
@@ -81,7 +81,7 @@ export default function StatusSheet({ status, onSave, onClose }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex size-11 items-center justify-center rounded-full bg-stone-100 text-lg"
+            className="flex size-11 items-center justify-center rounded-full bg-chip text-lg"
           >
             ✕
           </button>
@@ -144,7 +144,7 @@ export default function StatusSheet({ status, onSave, onClose }: Props) {
             onKeyDown={(event) => {
               if (event.key === "Enter") event.currentTarget.blur();
             }}
-            className="mt-2 min-h-12 w-full rounded-xl border border-stone-300 px-4 text-base"
+            className="mt-2 min-h-12 w-full rounded-xl border border-line px-4 text-base"
           />
         </section>
 

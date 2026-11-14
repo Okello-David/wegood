@@ -18,7 +18,7 @@ export default function ConfirmSheet({ title, confirmLabel, onConfirm, onClose }
         <button
           type="button"
           onClick={onClose}
-          className="min-h-14 rounded-xl bg-stone-100 font-semibold"
+          className="min-h-14 rounded-xl bg-chip font-semibold"
         >
           Keep it
         </button>

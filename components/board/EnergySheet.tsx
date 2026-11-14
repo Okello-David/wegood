@@ -33,7 +33,7 @@ export default function EnergySheet({
 
   return (
     <Sheet title={percent === null ? "Energy" : `Energy: about ${percent}%`} onClose={onClose}>
-      <p className="mb-4 text-sm text-stone-600">
+      <p className="mb-4 text-sm text-muted">
         An estimate from when you woke up and what you&apos;ve been doing. Planned blocks from your
         Plan count automatically.
       </p>
@@ -43,7 +43,7 @@ export default function EnergySheet({
         disabled={busy}
         onClick={onWake}
         className={`mb-5 min-h-14 w-full rounded-xl text-lg font-bold disabled:opacity-60 ${
-          awake ? "bg-stone-100" : "bg-amber-400 text-amber-950"
+          awake ? "bg-chip" : "bg-amber-400 text-amber-950"
         }`}
       >
         ☀️ I just woke up
@@ -56,7 +56,7 @@ export default function EnergySheet({
             type="button"
             disabled={busy}
             onClick={onStop}
-            className="mb-2 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-stone-900 font-semibold text-white disabled:opacity-60"
+            className="mb-2 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-on-primary disabled:opacity-60"
           >
             ⏹️ Stop {runningInfo.emoji} {runningInfo.label}
             <span className="font-normal opacity-80">
@@ -75,7 +75,7 @@ export default function EnergySheet({
                 aria-pressed={active}
                 onClick={() => onStart(activity.type)}
                 className={`flex min-h-20 flex-col items-center justify-center rounded-xl text-sm font-semibold disabled:opacity-60 ${
-                  active ? "bg-stone-900 text-white" : "bg-stone-100"
+                  active ? "bg-primary text-on-primary" : "bg-chip"
                 }`}
               >
                 <span aria-hidden="true" className="text-3xl">
@@ -98,7 +98,7 @@ export default function EnergySheet({
               disabled={busy}
               onClick={() => onFeel(feel.value)}
               aria-label={`${feel.value} of 5: ${feel.label}`}
-              className="flex min-h-16 flex-col items-center justify-center rounded-xl bg-stone-100 text-xs font-semibold disabled:opacity-60"
+              className="flex min-h-16 flex-col items-center justify-center rounded-xl bg-chip text-xs font-semibold disabled:opacity-60"
             >
               <span aria-hidden="true" className="text-3xl">
                 {feel.emoji}

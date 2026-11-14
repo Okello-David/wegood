@@ -89,10 +89,10 @@ export default function ProfileForm({
         <h1 className="text-2xl font-bold">Me</h1>
       </header>
 
-      <section className="mb-6 rounded-2xl bg-white p-4">
-        <p className="text-sm text-stone-600">Room</p>
+      <section className="mb-6 rounded-2xl bg-card p-4">
+        <p className="text-sm text-muted">Room</p>
         <p className="text-lg font-bold">{roomName}</p>
-        <p className="mt-1 text-sm text-stone-600">
+        <p className="mt-1 text-sm text-muted">
           Invite code: <span className="font-mono text-base font-semibold">{inviteCode}</span>
         </p>
       </section>
@@ -110,12 +110,12 @@ export default function ProfileForm({
             maxLength={30}
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="min-h-12 min-w-0 flex-1 rounded-xl border border-stone-300 bg-white px-4 text-base"
+            className="min-h-12 min-w-0 flex-1 rounded-xl border border-line bg-card px-4 text-base"
           />
           <button
             type="submit"
             disabled={nameUnchanged}
-            className="min-h-12 rounded-xl bg-stone-900 px-4 font-semibold text-white disabled:opacity-50"
+            className="min-h-12 rounded-xl bg-primary px-4 font-semibold text-on-primary disabled:opacity-50"
           >
             Save
           </button>
@@ -133,7 +133,7 @@ export default function ProfileForm({
               aria-pressed={emoji === option}
               onClick={() => void pickEmoji(option)}
               className={`flex aspect-square min-h-11 items-center justify-center rounded-xl text-2xl ${
-                emoji === option ? "bg-stone-900" : "bg-white"
+                emoji === option ? "bg-primary" : "bg-card"
               }`}
             >
               {option}
@@ -145,7 +145,7 @@ export default function ProfileForm({
       <button
         type="button"
         onClick={() => void signOut()}
-        className="min-h-12 w-full rounded-xl bg-white font-semibold text-red-700"
+        className="min-h-12 w-full rounded-xl bg-card font-semibold text-red-700"
       >
         Sign out
       </button>

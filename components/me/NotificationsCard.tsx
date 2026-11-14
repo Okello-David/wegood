@@ -110,19 +110,19 @@ export default function NotificationsCard({ userId, roomId }: Props) {
     else showToast("No device is subscribed. Turn notifications on again.");
   }
 
-  const primary = "min-h-14 w-full rounded-xl bg-stone-900 font-semibold text-white disabled:opacity-50";
-  const secondary = "min-h-12 w-full rounded-xl bg-stone-100 font-semibold disabled:opacity-50";
+  const primary = "min-h-14 w-full rounded-xl bg-primary font-semibold text-on-primary disabled:opacity-50";
+  const secondary = "min-h-12 w-full rounded-xl bg-chip font-semibold disabled:opacity-50";
 
   return (
-    <section className="mb-6 rounded-2xl bg-white p-4">
+    <section className="mb-6 rounded-2xl bg-card p-4">
       <h2 className="mb-1 text-lg font-bold">Notifications</h2>
 
-      {support === "loading" && <p className="text-stone-600">Checking…</p>}
+      {support === "loading" && <p className="text-muted">Checking…</p>}
 
       {support === "ios_needs_install" && (
         <>
           <p className="mb-3 font-semibold">Add WeGood? to your Home Screen first</p>
-          <p className="mb-3 text-sm text-stone-600">
+          <p className="mb-3 text-sm text-muted">
             iPhone only allows notifications for apps on the Home Screen.
           </p>
           <ol className="flex flex-col gap-3">
@@ -140,27 +140,27 @@ export default function NotificationsCard({ userId, roomId }: Props) {
       )}
 
       {support === "insecure" && (
-        <p className="text-stone-600">
+        <p className="text-muted">
           Notifications need a secure (https) address. They will work once the app is on its real
           web address.
         </p>
       )}
 
       {support === "not_configured" && (
-        <p className="text-stone-600">Notifications aren&apos;t set up on this server yet.</p>
+        <p className="text-muted">Notifications aren&apos;t set up on this server yet.</p>
       )}
 
       {support === "unsupported" && (
-        <p className="text-stone-600">
+        <p className="text-muted">
           This browser can&apos;t show notifications. Try Chrome on Android, or Safari on iPhone.
         </p>
       )}
 
-      {support === "ok" && state === "checking" && <p className="text-stone-600">Checking…</p>}
+      {support === "ok" && state === "checking" && <p className="text-muted">Checking…</p>}
 
       {support === "ok" && state === "off" && (
         <>
-          <p className="mb-3 text-stone-600">
+          <p className="mb-3 text-muted">
             Get a buzz when someone needs something, even with the app closed.
           </p>
           <button type="button" disabled={busy} onClick={() => void turnOn()} className={primary}>
@@ -170,7 +170,7 @@ export default function NotificationsCard({ userId, roomId }: Props) {
       )}
 
       {support === "ok" && state === "blocked" && (
-        <p className="text-stone-600">
+        <p className="text-muted">
           Notifications are blocked for WeGood? on this device. Open your browser&apos;s site
           settings (the icon next to the address), allow notifications, then reload this page.
         </p>
@@ -178,7 +178,7 @@ export default function NotificationsCard({ userId, roomId }: Props) {
 
       {support === "ok" && state === "on" && (
         <div className="flex flex-col gap-2">
-          <p className="text-stone-600">On for this device ✅</p>
+          <p className="text-muted">On for this device ✅</p>
           <button type="button" disabled={busy} onClick={() => void sendTest()} className={primary}>
             Send me a test notification
           </button>

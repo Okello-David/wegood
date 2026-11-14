@@ -209,6 +209,32 @@ try {
   for (let i = 0; i < 11; i++) statuses.push((await asUser(alice, ping)).status);
   check("10 allowed, the 11th in 10 minutes -> 429", statuses.slice(0, 10).every((s) => s === 200) && statuses[10] === 429, statuses.join(","));
 
+  // Phase 5. Called directly as the database would (the SQL test covers the
+  // job itself), so no real room on this laptop gets an auto-message.
+  console.log("\n-- Fun layer: starving and MVP pushes --");
+  const starving = { kind: "starving", room_id: roomId, sender_id: alice.id, audience: "all", title: "🍽️ alice is starving", body: "x", url: "/" };
+  r = await asUser(alice, starving);
+  check("app sending 'starving' -> 403", r.status === 403 && r.body.error === "kind_not_allowed", JSON.stringify(r.body));
+  r = await asUser(alice, { ...starving, kind: "mvp" });
+  check("app sending 'mvp' -> 403", r.status === 403 && r.body.error === "kind_not_allowed", JSON.stringify(r.body));
+  // Alice just hit the rate limit above; scheduled kinds must still go out.
+  r = await asDatabase(starving);
+  check("starving -> everyone except the hungry person, despite the rate limit", r.status === 200 && r.body.rule === "everyone" && sameSet(ids(r), [bob.id, carol.id]), JSON.stringify(r.body));
+  r = await asDatabase({ kind: "mvp", room_id: roomId, audience: "all", title: "🏆 MVP", body: "x", url: "/" });
+  check("mvp (no sender) -> the whole room", r.status === 200 && sameSet(ids(r), [alice.id, bob.id, carol.id]), JSON.stringify(r.body));
+  await setPrefs(carol, { fun: false });
+  await setPrefs(bob, { quiet_enabled: true, quiet_start: "00:00", quiet_end: "23:59" });
+  r = await asDatabase(starving);
+  check(
+    "Carol turned Fun off, Bob in quiet hours -> nobody",
+    ids(r).length === 0 &&
+      r.body.skipped.some((s) => s.user_id === carol.id && s.reason === "turned_off:fun") &&
+      r.body.skipped.some((s) => s.user_id === bob.id && s.reason === "quiet_hours"),
+    JSON.stringify(r.body),
+  );
+  await setPrefs(carol, { fun: true });
+  await setPrefs(bob, { quiet_enabled: false });
+
   console.log("\n-- Database triggers (row change -> pg_net -> function) --");
   clearLog(roomId);
   await setLocation(alice, false);

@@ -128,7 +128,7 @@ export function computeEnergy(
 }
 
 export function batteryColor(percent: number) {
-  if (percent > 60) return { fill: "bg-green-500", text: "text-green-800" };
-  if (percent >= 30) return { fill: "bg-amber-400", text: "text-amber-800" };
-  return { fill: "bg-red-500", text: "text-red-800" };
+  if (percent > 60) return { fill: "bg-green-500", text: "text-green-800 dark:text-green-300" };
+  if (percent >= 30) return { fill: "bg-amber-400", text: "text-amber-800 dark:text-amber-300" };
+  return { fill: "bg-red-500", text: "text-red-800 dark:text-red-300" };
 }

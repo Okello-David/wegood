@@ -13,6 +13,7 @@ type Settings = Pick<
   | "food"
   | "bringing"
   | "pings"
+  | "fun"
   | "quiet_enabled"
   | "quiet_start"
   | "quiet_end"
@@ -25,12 +26,13 @@ const DEFAULTS: Settings = {
   food: true,
   bringing: true,
   pings: true,
+  fun: true,
   quiet_enabled: true,
   quiet_start: "23:00",
   quiet_end: "06:00",
 };
 
-type ToggleKey = "requests" | "visitor_notes" | "food" | "bringing" | "pings";
+type ToggleKey = "requests" | "visitor_notes" | "food" | "bringing" | "pings" | "fun";
 
 const TYPES: { key: ToggleKey; icon: string; label: string }[] = [
   { key: "requests", icon: "🙋", label: "Requests (clothes, errands)" },
@@ -38,6 +40,7 @@ const TYPES: { key: ToggleKey; icon: string; label: string }[] = [
   { key: "food", icon: "🍽️", label: "Food is finished" },
   { key: "bringing", icon: "🛍️", label: "Someone is bringing something" },
   { key: "pings", icon: "📣", label: "Ping home" },
+  { key: "fun", icon: "😂", label: "Fun messages (starving alerts, weekly MVP)" },
 ];
 
 function Switch({
@@ -61,10 +64,10 @@ function Switch({
       <span
         aria-hidden="true"
         className={`flex h-7 w-12 shrink-0 items-center rounded-full px-1 transition-colors ${
-          checked ? "justify-end bg-green-600" : "justify-start bg-stone-300"
+          checked ? "justify-end bg-green-600" : "justify-start bg-line"
         }`}
       >
-        <span className="size-5 rounded-full bg-white" />
+        <span className="size-5 rounded-full bg-[#fff]" />
       </span>
     </button>
   );
@@ -107,12 +110,12 @@ export default function NotificationPrefs({
     }
   }
 
-  const timeClass = "min-h-12 rounded-xl border border-stone-300 bg-white px-3 text-base";
+  const timeClass = "min-h-12 rounded-xl border border-line bg-card px-3 text-base";
 
   return (
-    <section className="mb-6 rounded-2xl bg-white p-4">
+    <section className="mb-6 rounded-2xl bg-card p-4">
       <h2 className="mb-1 text-lg font-bold">What should buzz me?</h2>
-      <div className="divide-y divide-stone-100">
+      <div className="divide-y divide-line">
         {TYPES.map((type) => (
           <Switch
             key={type.key}
@@ -134,7 +137,7 @@ export default function NotificationPrefs({
       {settings.quiet_enabled && (
         <>
           <div className="mt-1 flex items-center gap-2">
-            <label className="flex flex-1 flex-col text-sm text-stone-600">
+            <label className="flex flex-1 flex-col text-sm text-muted">
               From
               <input
                 type="time"
@@ -146,7 +149,7 @@ export default function NotificationPrefs({
                 className={timeClass}
               />
             </label>
-            <label className="flex flex-1 flex-col text-sm text-stone-600">
+            <label className="flex flex-1 flex-col text-sm text-muted">
               Until
               <input
                 type="time"
@@ -159,7 +162,7 @@ export default function NotificationPrefs({
               />
             </label>
           </div>
-          <p className="mt-2 text-sm text-stone-600">🔥 Urgent requests still get through.</p>
+          <p className="mt-2 text-sm text-muted">🔥 Urgent requests still get through.</p>
         </>
       )}
 

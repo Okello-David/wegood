@@ -11,7 +11,8 @@ type LiveTable =
   | "feed_events"
   | "activities"
   | "energy_checkins"
-  | "schedule_items";
+  | "schedule_items"
+  | "point_events";
 type RowOf<T extends LiveTable> = Database["public"]["Tables"][T]["Row"];
 type Id = string | number;
 

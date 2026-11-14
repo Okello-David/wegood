@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- WeGood? logo: a speech bubble with a question mark.
+       Everything important sits inside the central 80% so Android's
+       "maskable" crop (circle, squircle...) never cuts it. -->
+  <rect width="512" height="512" fill="#fbbf24"/>
+  <path d="M168 112 H344 A64 64 0 0 1 408 176 V288 A64 64 0 0 1 344 352 H244 L168 412 L184 352 H168 A64 64 0 0 1 104 288 V176 A64 64 0 0 1 168 112 Z" fill="#ffffff"/>
+  <path d="M212 194 A46 46 0 1 1 280 234 C262 244 256 254 256 274" fill="none" stroke="#1c1917" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="318" r="22" fill="#1c1917"/>
+</svg>

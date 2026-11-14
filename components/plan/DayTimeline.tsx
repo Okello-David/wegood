@@ -191,7 +191,7 @@ export default function DayTimeline({
       {/* Hour labels */}
       <div className="w-12 shrink-0" aria-hidden="true">
         {hours.map((hour) => (
-          <div key={hour} style={{ height: HOUR_PX }} className="-mt-2 text-xs text-stone-500">
+          <div key={hour} style={{ height: HOUR_PX }} className="-mt-2 text-xs text-muted">
             {String(hour).padStart(2, "0")}:00
           </div>
         ))}
@@ -204,13 +204,13 @@ export default function DayTimeline({
         aria-label="Empty time: tap to add a block"
         onClick={createFromTap}
         style={{ height: (DAY_END_MIN - DAY_START_MIN) * PX_PER_MIN }}
-        className="relative flex-1 cursor-pointer rounded-xl bg-white"
+        className="relative flex-1 cursor-pointer rounded-xl bg-card"
       >
         {hours.map((hour) => (
           <div
             key={hour}
             style={{ top: top(hour * 60) }}
-            className="pointer-events-none absolute inset-x-0 border-t border-stone-200"
+            className="pointer-events-none absolute inset-x-0 border-t border-line"
           />
         ))}
 
@@ -256,7 +256,7 @@ export default function DayTimeline({
               style={{ top: top(startMin), height }}
               className={`absolute inset-x-1 z-10 rounded-lg border-l-4 px-2 py-1 text-sm ${
                 info.color
-              } ${isPreview ? "z-30 scale-[1.02] shadow-lg ring-2 ring-stone-900" : "shadow-sm"} transition-shadow`}
+              } ${isPreview ? "z-30 scale-[1.02] shadow-lg ring-2 ring-ink" : "shadow-sm"} transition-shadow`}
             >
               <div className="h-full overflow-hidden">
               <p className="truncate font-semibold">
@@ -266,7 +266,7 @@ export default function DayTimeline({
                 )}
               </p>
               {height >= 36 && (
-                <p className="text-xs text-stone-700">
+                <p className="text-xs text-ink">
                   {clockTime(startAt)}–{clockTime(endAt)}
                 </p>
               )}
@@ -281,7 +281,7 @@ export default function DayTimeline({
                 onPointerCancel={(event) => end(event, true)}
                 className="absolute inset-x-0 -bottom-3 z-10 flex h-7 cursor-ns-resize touch-none items-center justify-center"
               >
-                <span className="h-1 w-8 rounded-full bg-stone-600/50" />
+                <span className="h-1 w-8 rounded-full bg-muted/50" />
               </div>
             </div>
           );

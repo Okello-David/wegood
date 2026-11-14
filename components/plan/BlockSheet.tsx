@@ -65,7 +65,7 @@ export default function BlockSheet({
         maxLength={40}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        className="mb-3 min-h-12 w-full rounded-xl border border-stone-300 px-4 text-base"
+        className="mb-3 min-h-12 w-full rounded-xl border border-line px-4 text-base"
       />
 
       <button
@@ -74,7 +74,7 @@ export default function BlockSheet({
         aria-checked={repeating}
         onClick={() => setRepeatDays(repeating ? [] : [weekday])}
         className={`mb-2 flex min-h-12 w-full items-center justify-between rounded-xl px-4 font-semibold ${
-          repeating ? "bg-stone-900 text-white" : "bg-stone-100"
+          repeating ? "bg-primary text-on-primary" : "bg-chip"
         }`}
       >
         <span>🔁 Repeat weekly</span>
@@ -89,7 +89,7 @@ export default function BlockSheet({
               aria-pressed={repeatDays.includes(day)}
               onClick={() => toggleDay(day)}
               className={`min-h-11 rounded-lg text-xs font-semibold ${
-                repeatDays.includes(day) ? "bg-stone-900 text-white" : "bg-stone-100"
+                repeatDays.includes(day) ? "bg-primary text-on-primary" : "bg-chip"
               }`}
             >
               {label}
@@ -108,7 +108,7 @@ export default function BlockSheet({
             aria-pressed={type === activity.type}
             onClick={() => (mode === "new" ? save(activity.type) : setType(activity.type))}
             className={`flex min-h-20 flex-col items-center justify-center rounded-xl border-2 text-sm font-semibold disabled:opacity-60 ${
-              type === activity.type ? "border-stone-900" : "border-transparent"
+              type === activity.type ? "border-ink" : "border-transparent"
             } ${activity.color.split(" ")[0]}`}
           >
             <span aria-hidden="true" className="text-3xl">
@@ -125,7 +125,7 @@ export default function BlockSheet({
             type="button"
             disabled={busy || !type}
             onClick={() => type && save(type)}
-            className="min-h-12 rounded-xl bg-stone-900 font-semibold text-white disabled:opacity-60"
+            className="min-h-12 rounded-xl bg-primary font-semibold text-on-primary disabled:opacity-60"
           >
             Save
           </button>

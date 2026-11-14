@@ -1,4 +1,4 @@
-// Mirrors the Phase 1 to 4 migrations. Regenerate from the live project once it is
+// Mirrors the Phase 1 to 5 migrations. Regenerate from the live project once it is
 // connected: npx supabase gen types typescript --project-id <id> > types/database.ts
 
 export type LocationPreset =
@@ -17,6 +17,8 @@ type Room = {
   home_lat: number | null;
   home_lng: number | null;
   radius_m: number;
+  // Phase 5: decides when the room's week starts (Monday 00:00 local).
+  timezone: string;
   created_at: string;
 };
 
@@ -48,13 +50,21 @@ type Status = {
   eta: string | null;
   updated_at: string;
   expires_at: string | null;
+  // Phase 5: when hunger last changed (set by the database).
+  hunger_updated_at: string | null;
 };
 
 export type PantryKind = "grocery" | "ready_food";
 export type PantryState = "have" | "low" | "out";
 export type RequestKind = "errand" | "clothes" | "visitor_note" | "other";
 export type Urgency = "normal" | "urgent";
-export type FeedKind = "item_out" | "request_created" | "request_claimed" | "request_done";
+export type FeedKind =
+  | "item_out"
+  | "request_created"
+  | "request_claimed"
+  | "request_done"
+  | "auto"
+  | "mvp";
 
 type PantryItem = {
   id: string;
@@ -108,6 +118,8 @@ type NotificationPrefs = {
   food: boolean;
   bringing: boolean;
   pings: boolean;
+  // Phase 5: starving and MVP pushes.
+  fun: boolean;
   quiet_enabled: boolean;
   // Postgres `time`, e.g. "23:00:00".
   quiet_start: string;
@@ -158,6 +170,29 @@ type ScheduleItem = {
   repeat_days: number[];
   // "YYYY-MM-DD" on the phone's calendar.
   skipped_dates: string[];
+  created_at: string;
+};
+
+// Phase 5
+export type PointReason = "request_done" | "visitor_note" | "restock";
+
+type PointEvent = {
+  id: number;
+  room_id: string;
+  user_id: string;
+  points: number;
+  reason: PointReason;
+  source_id: string | null;
+  created_at: string;
+};
+
+type WeeklyMvp = {
+  room_id: string;
+  // "YYYY-MM-DD", the Monday the week started.
+  week_start: string;
+  user_id: string;
+  points: number;
+  pushed_at: string | null;
   created_at: string;
 };
 
@@ -236,6 +271,19 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      // Written only by the database (triggers and scheduled jobs).
+      point_events: {
+        Row: PointEvent;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      weekly_mvps: {
+        Row: WeeklyMvp;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       schedule_items: {
         Row: ScheduleItem;
         Insert: Pick<ScheduleItem, "room_id" | "title" | "type" | "starts_at" | "ends_at"> &
@@ -266,6 +314,10 @@ export type Database = {
         Returns: undefined;
       };
       set_geo_home: { Args: { p_at_home: boolean }; Returns: undefined };
+      week_leaderboard: {
+        Args: { p_room_id: string };
+        Returns: { user_id: string; points: number }[];
+      };
     };
     Enums: { location_preset: LocationPreset; activity_type: ActivityType };
     CompositeTypes: { [_ in never]: never };
@@ -283,3 +335,5 @@ export type NotificationPrefsPatch = Database["public"]["Tables"]["notification_
 export type ActivityRow = Activity;
 export type EnergyCheckinRow = EnergyCheckin;
 export type ScheduleItemRow = ScheduleItem;
+export type PointEventRow = PointEvent;
+export type WeeklyMvpRow = WeeklyMvp;

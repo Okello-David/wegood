@@ -30,7 +30,7 @@ export default function BottomTabs() {
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold ${
-                  active ? "text-stone-900" : "text-stone-500"
+                  active ? "text-ink" : "text-muted"
                 }`}
               >
                 <span

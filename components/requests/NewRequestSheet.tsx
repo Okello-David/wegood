@@ -49,7 +49,7 @@ export default function NewRequestSheet({ kind, roommates, onCreate, onClose }: 
           <fieldset>
             <legend className="mb-2 font-semibold">Who is it for?</legend>
             {roommates.length === 0 ? (
-              <p className="text-stone-600">Invite your roommates first.</p>
+              <p className="text-muted">Invite your roommates first.</p>
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {roommates.map((person) => (
@@ -59,7 +59,7 @@ export default function NewRequestSheet({ kind, roommates, onCreate, onClose }: 
                     aria-pressed={forUser === person.id}
                     onClick={() => setForUser(person.id)}
                     className={`flex min-h-14 items-center gap-2 rounded-xl px-3 font-semibold ${
-                      forUser === person.id ? "bg-stone-900 text-white" : "bg-stone-100"
+                      forUser === person.id ? "bg-primary text-on-primary" : "bg-chip"
                     }`}
                   >
                     <span className="text-2xl" aria-hidden="true">
@@ -82,7 +82,7 @@ export default function NewRequestSheet({ kind, roommates, onCreate, onClose }: 
           onChange={(event) => setText(event.target.value)}
           placeholder={info.placeholder}
           aria-label="Details"
-          className="rounded-xl border border-stone-300 bg-white px-4 py-3 text-base"
+          className="rounded-xl border border-line bg-card px-4 py-3 text-base"
         />
 
         <button
@@ -90,7 +90,7 @@ export default function NewRequestSheet({ kind, roommates, onCreate, onClose }: 
           aria-pressed={urgent}
           onClick={() => setUrgent((value) => !value)}
           className={`min-h-14 rounded-xl font-semibold ${
-            urgent ? "bg-red-600 text-white" : "bg-stone-100"
+            urgent ? "bg-red-600 text-white" : "bg-chip"
           }`}
         >
           {urgent ? "🔥 Urgent!" : "Not urgent · tap if urgent"}
@@ -99,7 +99,7 @@ export default function NewRequestSheet({ kind, roommates, onCreate, onClose }: 
         <button
           type="submit"
           disabled={saving || !ready}
-          className="min-h-14 rounded-xl bg-stone-900 font-semibold text-white disabled:opacity-50"
+          className="min-h-14 rounded-xl bg-primary font-semibold text-on-primary disabled:opacity-50"
         >
           Send to the room
         </button>

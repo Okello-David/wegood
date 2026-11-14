@@ -107,7 +107,7 @@ export default function HomeStuff({ roomId, initialItems }: Props) {
       <section className="mb-6">
         <h2 className="mb-2 text-lg font-bold">{title}</h2>
         {list.length === 0 ? (
-          <p className="rounded-2xl bg-white/60 p-4 text-center text-stone-600">{empty}</p>
+          <p className="rounded-2xl bg-card/60 p-4 text-center text-muted">{empty}</p>
         ) : (
           <div className="grid grid-cols-2 gap-2 min-[400px]:grid-cols-3">
             {list.map((item) => (
@@ -128,7 +128,7 @@ export default function HomeStuff({ roomId, initialItems }: Props) {
     <main className="mx-auto min-h-dvh max-w-md px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-44">
       <h1 className="mb-3 text-2xl font-bold">Home Stuff</h1>
 
-      <div role="tablist" className="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-white/70 p-1">
+      <div role="tablist" className="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-card/70 p-1">
         {(
           [
             ["stock", "📦 Stock"],
@@ -142,7 +142,7 @@ export default function HomeStuff({ roomId, initialItems }: Props) {
             aria-selected={view === value}
             onClick={() => setView(value)}
             className={`min-h-12 rounded-xl font-semibold ${
-              view === value ? "bg-stone-900 text-white" : ""
+              view === value ? "bg-primary text-on-primary" : ""
             }`}
           >
             {label}
@@ -157,7 +157,7 @@ export default function HomeStuff({ roomId, initialItems }: Props) {
           showToast={showToast}
         />
       ) : items.length === 0 ? (
-        <div className="rounded-2xl bg-white p-6 text-center">
+        <div className="rounded-2xl bg-card p-6 text-center">
           <p className="text-5xl" aria-hidden="true">
             🧺
           </p>
@@ -166,7 +166,7 @@ export default function HomeStuff({ roomId, initialItems }: Props) {
             type="button"
             disabled={seeding}
             onClick={() => void seed()}
-            className="min-h-14 w-full rounded-xl bg-stone-900 font-semibold text-white disabled:opacity-50"
+            className="min-h-14 w-full rounded-xl bg-primary font-semibold text-on-primary disabled:opacity-50"
           >
             Add common items
           </button>
@@ -175,7 +175,7 @@ export default function HomeStuff({ roomId, initialItems }: Props) {
         <>
           {renderSection("🍲 Ready food", sections.ready, "Nothing cooked. Tap + to add some.")}
           {renderSection("🧂 Groceries", sections.groceries, "No groceries yet. Tap + to add.")}
-          <p className="text-center text-sm text-stone-500">
+          <p className="text-center text-sm text-muted">
             Tap to change · Hold to delete
           </p>
         </>
@@ -185,7 +185,7 @@ export default function HomeStuff({ roomId, initialItems }: Props) {
         type="button"
         onClick={() => setAdding(true)}
         aria-label="Add an item"
-        className="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex size-16 items-center justify-center rounded-full bg-stone-900 text-4xl text-white shadow-lg"
+        className="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 flex size-16 items-center justify-center rounded-full bg-primary text-4xl text-on-primary shadow-lg"
       >
         +
       </button>

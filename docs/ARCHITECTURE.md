@@ -165,3 +165,51 @@ The timeline uses plain pointer events: hold ~0.3 s then drag (so a quick swipe 
 | `schedule_items` | Room members | Owner: insert, update, delete |
 
 All three have `room_id` (Realtime filters by it) and a foreign key to `room_members`, so leaving the room removes them. `user_id` defaults to the signed-in user.
+
+## Fun layer (Phase 5)
+
+### Points can only come from the database
+
+Points are bragging rights, so they get the same protection as the feed: browsers can **read** `point_events` and `weekly_mvps`, but there is no insert, update or delete grant on them at all. A hand-made API request is refused with "permission denied" before RLS is even asked.
+
+Rows are written by `private.award_points()`, which only two triggers call:
+
+| Event | Points | To | Guard |
+|---|---|---|---|
+| Request done (`done_at` set) | 10, or 15 if urgent | `claimed_by` | Not if the claimer is the creator. One payout per request: unique index on `(reason, source_id)` |
+| Visitor note done | 3 | The writer | Only when the person it's for taps "Got it" themselves, so writing notes alone earns nothing |
+| Pantry item out → have | 5 | Whoever restocked | Item was out for 10+ minutes, and one item pays at most once per 12 hours |
+
+`source_id` (the request or item id) wasn't in the original spec. It's what turns "one payout per request" into a database rule instead of a hope.
+
+The leaderboard is `week_leaderboard(room_id)`, a `security invoker` function, so RLS on `point_events` still applies. It counts from Monday 00:00 **in the room's time zone** (`rooms.timezone`, default `Africa/Kampala`). The browser listens to `point_events` over Realtime only to know *when* to re-ask for the totals.
+
+### Weekly MVP: hourly and idempotent
+
+`private.weekly_mvp_job()` runs every hour (pg_cron) instead of once on Monday at midnight. Each run does this for every room: "has this room's Monday 00:00 passed, and does last week have no MVP yet? Then crown the top scorer(s)." This has three advantages:
+
+- It works in any time zone without a separate cron line per zone.
+- Running it twice does nothing the second time.
+- A missed run (the database was down) is caught up an hour later.
+
+A tie gives co-MVPs, and a 0-point week gives no MVP. The feed line appears at midnight, but the **push waits until 08:00 Monday**, because midnight is inside everyone's default quiet hours and would be skipped. `pushed_at` makes sure it's sent once. The 🏆 shows on the winner's avatar for the following week.
+
+### Auto-messages: at most once per day
+
+`private.run_auto_messages()` runs every 30 minutes and has three rules: starving (hunger 3 for 3-12 hours, feed + push), nobody updated for 12 hours (feed only), and everyone home with all ready food finished (feed only).
+
+"Once per day" lives in `auto_message_log` (RLS on, no grants, invisible to the app). The trick is that **choosing who qualifies and logging it is one statement**: `insert into auto_message_log ... select ... where not exists (a log row in the last 24 h) returning ...`. The loop then sends only what that insert returned, so a second run straight after finds nothing. An advisory lock stops two slow runs from overlapping.
+
+`statuses.hunger_updated_at` is set by the `touch_status` trigger whenever hunger changes, on every write path, so a client can't fake "starving since yesterday".
+
+Starving and MVP pushes go through the same `notify` function as everything else. They count as database-only kinds (a browser can't send them), they aren't rate limited (no one tapped anything), and they respect quiet hours and the new **😂 Fun messages** switch (`notification_prefs.fun`).
+
+### Captions, avatars and animations (browser only)
+
+- `lib/vibes.ts` picks a caption from the person's situation (the first rule that matches, e.g. low battery before "at campus"). The line inside a situation is chosen by a hash of `user id + situation + 10-minute window`, so it stays put for 10 minutes instead of changing on every re-render, and two people in the same situation usually get different lines. Captions never contain names, so no pronouns are needed.
+- Animations are plain CSS keyframes in `globals.css` (no animation library): avatar ring pulse when a status changed in the last 2 minutes, card bounce on a live change, confetti when you finish someone's request. All are `motion-safe:`; confetti isn't rendered at all when the phone asks for reduced motion.
+- `navigator.vibrate(10)` on the main buttons. iPhone Safari doesn't support it, so it silently does nothing there.
+
+### Dark mode
+
+Colours are semantic tokens in `app/globals.css` (`page`, `card`, `chip`, `ink`, `muted`, `line`, `primary`). Components use `bg-card` and `text-muted` instead of `bg-white` and `text-stone-600`, and the tokens switch under `prefers-color-scheme: dark`. There is no toggle; it follows the phone. Amber, red and green accents are the same in both themes.

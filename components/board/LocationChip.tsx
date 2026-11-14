@@ -16,7 +16,7 @@ export default function LocationChip({ value, source = null }: Props) {
         <span
           title={source === "geo" ? "Set automatically by location" : "Set by hand"}
           className={`rounded-full px-1.5 text-[11px] leading-5 font-semibold uppercase ${
-            source === "geo" ? "bg-emerald-200 text-emerald-900" : "bg-stone-200 text-stone-700"
+            source === "geo" ? "bg-emerald-200 text-emerald-900" : "bg-chip text-ink"
           }`}
         >
           {source === "geo" ? "auto" : "manual"}

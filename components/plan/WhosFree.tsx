@@ -29,12 +29,12 @@ export default function WhosFree({ people, myId, schedule, now }: Props) {
   const height = HOURS * HOUR_PX;
 
   return (
-    <div className="flex rounded-2xl bg-white p-2">
+    <div className="flex rounded-2xl bg-card p-2">
       <div className="relative w-11 shrink-0 pt-14" aria-hidden="true">
         <div className="relative" style={{ height }}>
-          <span className="absolute -top-2 text-xs font-semibold text-red-600">now</span>
+          <span className="absolute -top-2 text-xs font-semibold text-red-600 dark:text-red-400">now</span>
           {lines.map((t) => (
-            <span key={t} style={{ top: y(t) - 8 }} className="absolute text-xs text-stone-500">
+            <span key={t} style={{ top: y(t) - 8 }} className="absolute text-xs text-muted">
               {clockTime(t)}
             </span>
           ))}
@@ -75,7 +75,7 @@ export default function WhosFree({ people, myId, schedule, now }: Props) {
                   <div
                     key={t}
                     style={{ top: y(t) }}
-                    className="absolute inset-x-0 border-t border-stone-200"
+                    className="absolute inset-x-0 border-t border-line"
                   />
                 ))}
                 {blocks.map((block) => {

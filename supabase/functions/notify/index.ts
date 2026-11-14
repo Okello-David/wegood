@@ -16,8 +16,30 @@ const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const AT_HOME_FRESH_MS = 3 * 60 * 60 * 1000;
 
-type Kind = "request" | "visitor_note" | "food" | "bringing" | "ping" | "test" | "escalation";
-const KINDS: Kind[] = ["request", "visitor_note", "food", "bringing", "ping", "test", "escalation"];
+type Kind =
+  | "request"
+  | "visitor_note"
+  | "food"
+  | "bringing"
+  | "ping"
+  | "test"
+  | "escalation"
+  | "starving"
+  | "mvp";
+const KINDS: Kind[] = [
+  "request",
+  "visitor_note",
+  "food",
+  "bringing",
+  "ping",
+  "test",
+  "escalation",
+  "starving",
+  "mvp",
+];
+// Sent by scheduled jobs, not by someone tapping, so they neither count
+// against nor are blocked by the sender's rate limit.
+const SCHEDULED_KINDS: Kind[] = ["escalation", "starving", "mvp"];
 // Which kinds a roommate's browser may send directly. Everything else is
 // written by the database, so its text can't be faked.
 const USER_KINDS: Kind[] = ["ping", "test"];
@@ -30,6 +52,8 @@ const PREF_FOR_KIND: Record<Kind, string | null> = {
   food: "food",
   bringing: "bringing",
   ping: "pings",
+  starving: "fun",
+  mvp: "fun",
   test: null,
 };
 
@@ -40,6 +64,7 @@ type Prefs = {
   food: boolean;
   bringing: boolean;
   pings: boolean;
+  fun: boolean;
   quiet_enabled: boolean;
   quiet_start: string;
   quiet_end: string;
@@ -52,6 +77,7 @@ const DEFAULT_PREFS: Omit<Prefs, "user_id"> = {
   food: true,
   bringing: true,
   pings: true,
+  fun: true,
   quiet_enabled: true,
   quiet_start: "23:00",
   quiet_end: "06:00",
@@ -195,15 +221,15 @@ Deno.serve(async (req) => {
   }
 
   // ---- 3. Rate limit: 10 per sender per 10 minutes ---------------------------
-  // Escalations come from the scheduler, not from someone tapping, so they
-  // don't count against (and aren't blocked by) the sender's limit.
-  if (senderId && kind !== "escalation") {
+  // Scheduled kinds (escalation, starving, mvp) don't count against, and
+  // aren't blocked by, the sender's limit.
+  if (senderId && !SCHEDULED_KINDS.includes(kind)) {
     const since = new Date(Date.now() - RATE_WINDOW_MS).toISOString();
     const { count, error } = await admin
       .from("notification_log")
       .select("id", { count: "exact", head: true })
       .eq("sender_id", senderId)
-      .neq("kind", "escalation")
+      .not("kind", "in", `(${SCHEDULED_KINDS.join(",")})`)
       .gte("created_at", since);
     if (error) return json({ error: "db_error", detail: error.message }, 500);
     if ((count ?? 0) >= RATE_LIMIT) {

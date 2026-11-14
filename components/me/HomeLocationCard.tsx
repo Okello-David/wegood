@@ -164,9 +164,9 @@ export default function HomeLocationCard({ roomId, isAdmin, hasHome, initialRadi
     "min-h-12 w-full rounded-xl px-4 font-semibold disabled:opacity-60";
 
   return (
-    <section className="mb-6 rounded-2xl bg-white p-4">
+    <section className="mb-6 rounded-2xl bg-card p-4">
       <h2 className="mb-1 text-lg font-bold">📍 Auto-home</h2>
-      <p className="mb-3 text-sm text-stone-600">
+      <p className="mb-3 text-sm text-muted">
         When you open the app, your phone checks if it&apos;s inside the home circle and tells
         your roommates only <b>home</b> or <b>out</b>. Your location never leaves the phone.
       </p>
@@ -178,7 +178,7 @@ export default function HomeLocationCard({ roomId, isAdmin, hasHome, initialRadi
       )}
 
       {!hasHome && !isAdmin && (
-        <p className="text-stone-600">Waiting for the room admin to set where home is.</p>
+        <p className="text-muted">Waiting for the room admin to set where home is.</p>
       )}
 
       {hasHome && (
@@ -190,32 +190,32 @@ export default function HomeLocationCard({ roomId, isAdmin, hasHome, initialRadi
             disabled={busy || !secure}
             onClick={() => void toggle()}
             className={`${button} flex items-center justify-between ${
-              enabled ? "bg-emerald-600 text-white" : "bg-stone-100"
+              enabled ? "bg-emerald-600 text-white" : "bg-chip"
             }`}
           >
             <span>Auto-detect when I&apos;m home</span>
             <span aria-hidden="true">{enabled ? "ON" : "OFF"}</span>
           </button>
           {blocked && (
-            <p className="mt-2 text-sm text-red-700">
+            <p className="mt-2 text-sm text-red-700 dark:text-red-300">
               Location is blocked for this site. Allow it in your browser&apos;s site settings,
               then switch this on again.
             </p>
           )}
           {enabled && lastCheck && (
-            <p className="mt-2 text-sm text-stone-600">Last check: {describeCheck(lastCheck)}</p>
+            <p className="mt-2 text-sm text-muted">Last check: {describeCheck(lastCheck)}</p>
           )}
         </>
       )}
 
       {isAdmin && (
-        <div className="mt-4 border-t border-stone-200 pt-4">
-          <p className="mb-2 text-sm font-semibold text-stone-700">Admin</p>
+        <div className="mt-4 border-t border-line pt-4">
+          <p className="mb-2 text-sm font-semibold text-ink">Admin</p>
           <button
             type="button"
             disabled={busy || !secure}
             onClick={() => void setHomeHere()}
-            className={`${button} bg-stone-900 text-white`}
+            className={`${button} bg-primary text-on-primary`}
           >
             {busy ? "Finding you…" : hasHome ? "I'm at home now, move home here" : "I'm at home now, set this as home"}
           </button>
@@ -233,7 +233,7 @@ export default function HomeLocationCard({ roomId, isAdmin, hasHome, initialRadi
               step={10}
               value={radius}
               onChange={(event) => changeRadius(Number(event.target.value))}
-              className="mt-2 h-11 w-full accent-stone-900"
+              className="mt-2 h-11 w-full accent-ink"
             />
           </label>
         </div>

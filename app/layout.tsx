@@ -14,13 +14,18 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Lets the app use the full iPhone screen; pages pad around the notch.
   viewportFit: "cover",
-  themeColor: "#fef3c7",
+  // The phone's status bar matches the page: light amber, or dark stone in
+  // dark mode (same values as --color-page in globals.css).
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fef3c7" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1917" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en">
-      <body className="min-h-dvh bg-amber-100 text-stone-900 antialiased">
+      <body className="min-h-dvh bg-page text-ink antialiased">
         {children}
       </body>
     </html>

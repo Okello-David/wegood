@@ -22,7 +22,7 @@ export default function Toast({ toast, onDone }: Props) {
       className="pointer-events-none fixed inset-x-0 top-[calc(0.75rem+env(safe-area-inset-top))] z-50 flex justify-center px-4"
     >
       {toast && (
-        <p className="max-w-full truncate rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
+        <p className="max-w-full truncate rounded-full bg-primary px-4 py-2 text-sm font-medium text-on-primary shadow-lg">
           {toast.message}
         </p>
       )}

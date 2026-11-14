@@ -39,12 +39,12 @@ export default function RequestCard({
       if (request.for_user === myId) {
         action = { label: "Got it 👍", run: onDone, style: "bg-green-600 text-white" };
       } else if (mine) {
-        action = { label: "Clear", run: onDone, style: "bg-stone-100" };
+        action = { label: "Clear", run: onDone, style: "bg-chip" };
       }
     } else if (!request.claimed_by) {
       action = mine
-        ? { label: "Done ✅", run: onDone, style: "bg-stone-100" }
-        : { label: "I got it 🙌", run: onClaim, style: "bg-stone-900 text-white" };
+        ? { label: "Done ✅", run: onDone, style: "bg-chip" }
+        : { label: "I got it 🙌", run: onClaim, style: "bg-primary text-on-primary" };
     } else if (request.claimed_by === myId || mine) {
       action = { label: "Done ✅", run: onDone, style: "bg-green-600 text-white" };
     }
@@ -52,7 +52,7 @@ export default function RequestCard({
 
   return (
     <article
-      className={`rounded-2xl bg-white p-4 shadow-sm ${urgent ? "ring-2 ring-red-500" : ""} ${
+      className={`rounded-2xl bg-card p-4 shadow-sm ${urgent ? "ring-2 ring-red-500" : ""} ${
         finished ? "opacity-70" : ""
       }`}
     >
@@ -62,24 +62,24 @@ export default function RequestCard({
         </span>
         <div className="min-w-0 flex-1">
           {urgent && (
-            <p className="mb-1 text-xs font-bold tracking-wide text-red-600 uppercase">🔥 Urgent</p>
+            <p className="mb-1 text-xs font-bold tracking-wide text-red-600 uppercase dark:text-red-400">🔥 Urgent</p>
           )}
           {isNote && (
-            <p className="text-sm font-semibold text-amber-700">
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
               For {request.for_user === myId ? "you" : name(request.for_user)}
             </p>
           )}
           <p className="text-lg break-words">{request.text}</p>
-          <p className="mt-1 text-sm text-stone-600">
+          <p className="mt-1 text-sm text-muted">
             {mine ? "You" : name(request.created_by)} · {timeAgo(request.created_at, now)}
           </p>
           {request.claimed_by && !finished && (
-            <p className="mt-1 font-semibold text-green-700">
+            <p className="mt-1 font-semibold text-green-700 dark:text-green-300">
               🙌 {request.claimed_by === myId ? "You're" : `${name(request.claimed_by)}'s`} on it
             </p>
           )}
           {finished && (
-            <p className="mt-1 text-sm text-stone-600">
+            <p className="mt-1 text-sm text-muted">
               ✅ Done {timeAgo(request.done_at!, now)}
               {request.claimed_by && ` by ${name(request.claimed_by)}`}
             </p>
@@ -90,7 +90,7 @@ export default function RequestCard({
             type="button"
             onClick={onDelete}
             aria-label="Delete request"
-            className="flex size-11 shrink-0 items-center justify-center rounded-full text-xl text-stone-400"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full text-xl text-muted"
           >
             🗑️
           </button>

@@ -15,11 +15,11 @@ export default function ShoppingList({ items, onBought, showToast }: Props) {
 
   if (out.length + low.length === 0) {
     return (
-      <div className="rounded-2xl bg-white p-6 text-center">
+      <div className="rounded-2xl bg-card p-6 text-center">
         <p className="text-5xl" aria-hidden="true">
           🎉
         </p>
-        <p className="mt-2">Nothing to buy. The house is stocked!</p>
+        <p className="mt-2">Nothing to buy. The cupboard is living its best life.</p>
       </div>
     );
   }
@@ -37,7 +37,7 @@ export default function ShoppingList({ items, onBought, showToast }: Props) {
         <h2 className="mb-2 text-lg font-bold">{title}</h2>
         <ul className="flex flex-col gap-2">
           {list.map((item) => (
-            <li key={item.id} className="flex items-center gap-3 rounded-2xl bg-white p-2 pl-4">
+            <li key={item.id} className="flex items-center gap-3 rounded-2xl bg-card p-2 pl-4">
               <span className={`size-3 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
               <span className="min-w-0 flex-1 truncate text-lg font-semibold">{item.name}</span>
               <button
@@ -60,7 +60,7 @@ export default function ShoppingList({ items, onBought, showToast }: Props) {
         <button
           type="button"
           onClick={() => void copy()}
-          className="min-h-14 rounded-xl bg-stone-900 font-semibold text-white"
+          className="min-h-14 rounded-xl bg-primary font-semibold text-on-primary"
         >
           📋 Copy list
         </button>

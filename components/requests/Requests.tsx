@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import NewRequestSheet, { type NewRequest } from "@/components/requests/NewRequestSheet";
 import RequestCard from "@/components/requests/RequestCard";
 import ConfirmSheet from "@/components/ui/ConfirmSheet";
+import Confetti from "@/components/ui/Confetti";
 import Toast from "@/components/ui/Toast";
 import { useNow } from "@/components/ui/useNow";
 import { useToast } from "@/components/ui/useToast";
+import { haptic, prefersReducedMotion } from "@/lib/haptics";
 import { loadRequests } from "@/lib/queries";
 import { useLiveRows } from "@/lib/realtime/useLiveRows";
 import { REQUEST_KINDS, requestErrorMessage, splitRequests } from "@/lib/requests";
@@ -37,6 +39,10 @@ export default function Requests({ myId, roomId, initialRequests, profiles, serv
   const [creating, setCreating] = useState<RequestKind | null>(null);
   const [deleting, setDeleting] = useState<RequestRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Phase 5: a number per celebration (0 = none showing).
+  const [confetti, setConfetti] = useState(0);
+  const bursts = useRef(0);
+  const endConfetti = useCallback(() => setConfetti(0), []);
 
   const profileMap = useMemo(() => Object.fromEntries(profiles.map((p) => [p.id, p])), [profiles]);
   const roommates = useMemo(
@@ -63,6 +69,7 @@ export default function Requests({ myId, roomId, initialRequests, profiles, serv
       return false;
     }
     setRows((current) => (current.some((r) => r.id === data.id) ? current : [data, ...current]));
+    haptic();
     showToast(request.urgency === "urgent" ? "Sent, with sirens 🚨" : "Sent to the room 📣");
     return true;
   }
@@ -70,6 +77,7 @@ export default function Requests({ myId, roomId, initialRequests, profiles, serv
   // Not optimistic on purpose: if two people tap at once, the database picks
   // the winner, and we only show "you got it" once it has said so.
   async function claim(request: RequestRow) {
+    haptic();
     setBusyId(request.id);
     const { data, error } = await supabase.rpc("claim_request", { p_id: request.id });
     setBusyId(null);
@@ -92,7 +100,25 @@ export default function Requests({ myId, roomId, initialRequests, profiles, serv
       return;
     }
     replace(data);
-    showToast(request.kind === "visitor_note" ? "Noted 👍" : "Done! 🎉");
+    // Same rule the database uses to award points (see the Phase 5
+    // migration): you finished something you claimed for someone else.
+    const earned =
+      data.kind !== "visitor_note" && data.claimed_by === myId && data.created_by !== myId
+        ? data.urgency === "urgent"
+          ? 15
+          : 10
+        : 0;
+    if (earned > 0) {
+      haptic(30);
+      if (!prefersReducedMotion()) {
+        bursts.current += 1;
+        setConfetti(bursts.current);
+      }
+      showToast(`Done! +${earned} points 🎉`);
+    } else {
+      haptic();
+      showToast(request.kind === "visitor_note" ? "Noted 👍" : "Done! 🎉");
+    }
   }
 
   async function remove(request: RequestRow) {
@@ -130,7 +156,7 @@ export default function Requests({ myId, roomId, initialRequests, profiles, serv
             key={kind}
             type="button"
             onClick={() => setCreating(kind)}
-            className="flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl bg-white font-semibold shadow-sm active:scale-95"
+            className="flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl bg-card font-semibold shadow-sm active:scale-95"
           >
             <span className="text-3xl" aria-hidden="true">
               {REQUEST_KINDS[kind].icon}
@@ -143,8 +169,8 @@ export default function Requests({ myId, roomId, initialRequests, profiles, serv
       <section className="mb-6">
         <h2 className="mb-2 text-lg font-bold">Open {open.length > 0 && `(${open.length})`}</h2>
         {open.length === 0 ? (
-          <p className="rounded-2xl bg-white/60 p-4 text-center text-stone-600">
-            Nobody needs anything. Suspicious. 🤔
+          <p className="rounded-2xl bg-card/60 p-4 text-center text-muted">
+            No requests. Suspiciously peaceful. 🕊️
           </p>
         ) : (
           <div className="flex flex-col gap-3">{open.map(card)}</div>
@@ -183,6 +209,7 @@ export default function Requests({ myId, roomId, initialRequests, profiles, serv
           onClose={() => setDeleting(null)}
         />
       )}
+      {confetti > 0 && <Confetti burst={confetti} onDone={endConfetti} />}
       <Toast toast={toast} onDone={clearToast} />
     </main>
   );

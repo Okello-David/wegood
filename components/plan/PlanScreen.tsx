@@ -172,12 +172,12 @@ export default function PlanScreen({ myId, roomId, profiles, initialSchedule, se
   }
 
   const tab = (active: boolean) =>
-    `min-h-11 flex-1 rounded-xl font-semibold ${active ? "bg-stone-900 text-white" : "text-stone-600"}`;
+    `min-h-11 flex-1 rounded-xl font-semibold ${active ? "bg-primary text-on-primary" : "text-muted"}`;
 
   return (
     <main className="mx-auto min-h-dvh max-w-md px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-28">
       <h1 className="mb-3 text-2xl font-bold">Plan 📅</h1>
-      <div role="tablist" className="mb-4 flex gap-1 rounded-2xl bg-white p-1">
+      <div role="tablist" className="mb-4 flex gap-1 rounded-2xl bg-card p-1">
         <button role="tab" aria-selected={view === "mine"} type="button" onClick={() => setView("mine")} className={tab(view === "mine")}>
           My day
         </button>
@@ -187,20 +187,20 @@ export default function PlanScreen({ myId, roomId, profiles, initialSchedule, se
       </div>
 
       {/* Times depend on the phone's time zone, so nothing is drawn on the server. */}
-      {!isClient && <p className="text-stone-600">Loading…</p>}
+      {!isClient && <p className="text-muted">Loading…</p>}
 
       {isClient && view === "mine" && (
         <>
           <div className="mb-3 flex items-center justify-between">
-            <button type="button" aria-label="Previous day" onClick={() => setDayOffset((d) => d - 1)} className="size-11 rounded-full bg-white text-xl">
+            <button type="button" aria-label="Previous day" onClick={() => setDayOffset((d) => d - 1)} className="size-11 rounded-full bg-card text-xl">
               ‹
             </button>
             <p className="font-semibold">{dayLabel(dayOffset, dayStart)}</p>
-            <button type="button" aria-label="Next day" onClick={() => setDayOffset((d) => d + 1)} className="size-11 rounded-full bg-white text-xl">
+            <button type="button" aria-label="Next day" onClick={() => setDayOffset((d) => d + 1)} className="size-11 rounded-full bg-card text-xl">
               ›
             </button>
           </div>
-          <p className="mb-3 text-sm text-stone-600">
+          <p className="mb-3 text-sm text-muted">
             Tap empty time to add. Hold a block, then drag to move it. Drag its bottom bar to
             make it longer.
           </p>

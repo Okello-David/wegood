@@ -40,7 +40,7 @@ export default function LoginForm({ linkFailed }: { linkFailed: boolean }) {
 
   if (state === "sent") {
     return (
-      <p className="rounded-2xl bg-white p-4 text-center text-lg" role="status">
+      <p className="rounded-2xl bg-card p-4 text-center text-lg" role="status">
         📬 Link sent to <strong className="break-all">{email.trim()}</strong>. Open
         it on this device.
       </p>
@@ -60,17 +60,17 @@ export default function LoginForm({ linkFailed }: { linkFailed: boolean }) {
         autoComplete="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
-        className="min-h-12 rounded-xl border border-stone-300 bg-white px-4 text-base"
+        className="min-h-12 rounded-xl border border-line bg-card px-4 text-base"
       />
       {error && (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-red-700 dark:text-red-300" role="alert">
           {error}
         </p>
       )}
       <button
         type="submit"
         disabled={state === "sending"}
-        className="min-h-12 rounded-xl bg-stone-900 px-4 text-lg font-semibold text-white disabled:opacity-60"
+        className="min-h-12 rounded-xl bg-primary px-4 text-lg font-semibold text-on-primary disabled:opacity-60"
       >
         {state === "sending" ? "Sending…" : "Send me a magic link"}
       </button>

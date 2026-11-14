@@ -16,10 +16,10 @@ export default function Battery({ energy, isMe = false, onOpen }: Props) {
   const body = (
     <>
       <span className="flex items-center" aria-hidden="true">
-        <span className="relative flex h-6 w-11 items-center overflow-hidden rounded-md border-2 border-stone-700 bg-white">
+        <span className="relative flex h-6 w-11 items-center overflow-hidden rounded-md border-2 border-stone-700 bg-white dark:border-stone-300">
           {colors && (
             <span
-              className={`absolute inset-y-0 left-0 ${colors.fill} transition-[width] duration-500`}
+              className={`absolute inset-y-0 left-0 ${colors.fill} motion-safe:transition-[width] motion-safe:duration-700`}
               style={{ width: `${percent}%` }}
             />
           )}
@@ -27,9 +27,9 @@ export default function Battery({ energy, isMe = false, onOpen }: Props) {
             {energy === undefined ? "…" : percent === null ? "?" : `${percent}%`}
           </span>
         </span>
-        <span className="h-2.5 w-1 rounded-r-sm bg-stone-700" />
+        <span className="h-2.5 w-1 rounded-r-sm bg-stone-700 dark:bg-stone-300" />
       </span>
-      <span className={`text-[11px] leading-tight ${colors?.text ?? "text-stone-500"}`}>
+      <span className={`text-[11px] leading-tight ${colors?.text ?? "text-muted"}`}>
         {energy !== undefined && percent === null
           ? isMe
             ? "Tap to wake up"
@@ -45,7 +45,7 @@ export default function Battery({ energy, isMe = false, onOpen }: Props) {
 
   if (onOpen) {
     return (
-      <button type="button" onClick={onOpen} aria-label={`${label}. Update my energy`} className={`${className} bg-stone-50 active:bg-stone-100`}>
+      <button type="button" onClick={onOpen} aria-label={`${label}. Update my energy`} className={`${className} bg-chip active:bg-line`}>
         {body}
       </button>
     );

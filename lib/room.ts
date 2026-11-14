@@ -2,9 +2,12 @@ import { redirect } from "next/navigation";
 import {
   loadActivities,
   loadCheckins,
+  loadCurrentMvps,
   loadFeed,
+  loadLeaderboard,
   loadProfiles,
   loadRequests,
+  loadRecentPoints,
   loadSchedule,
 } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -39,8 +42,19 @@ export async function requireRoom() {
 
 export async function getBoardData() {
   const { userId, roomId, supabase } = await requireRoom();
-  const [room, profiles, statuses, requests, feed, activities, checkins, schedule] =
-    await Promise.all([
+  const [
+    room,
+    profiles,
+    statuses,
+    requests,
+    feed,
+    activities,
+    checkins,
+    schedule,
+    leaderboard,
+    points,
+    mvps,
+  ] = await Promise.all([
     supabase.from("rooms").select("name, invite_code").eq("id", roomId).single(),
     supabase.from("profiles").select("*"), // RLS limits this to roommates.
     supabase.from("statuses").select("*").eq("room_id", roomId),
@@ -49,6 +63,9 @@ export async function getBoardData() {
     loadActivities(supabase, roomId),
     loadCheckins(supabase, roomId),
     loadSchedule(supabase, roomId),
+    loadLeaderboard(supabase, roomId),
+    loadRecentPoints(supabase, roomId),
+    loadCurrentMvps(supabase, roomId),
   ]);
   const failure = room.error ?? profiles.error ?? statuses.error;
   if (failure) throw new Error(failure.message);
@@ -65,6 +82,9 @@ export async function getBoardData() {
     activities,
     checkins,
     schedule,
+    leaderboard,
+    points,
+    mvps,
     serverNow: Date.now(),
   };
 }
